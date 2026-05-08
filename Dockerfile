@@ -9,13 +9,17 @@ RUN apk add --no-cache \
     libpng-dev libjpeg-turbo-dev freetype-dev libwebp-dev \
     libzip-dev oniguruma-dev libxml2-dev \
     imagemagick-dev imagemagick \
-    jpegoptim optipng supervisor
+    jpegoptim optipng supervisor \
+    sqlite-dev
 
-# Install PHP extensions
+# Install GD extension (with configure flags)
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install -j$(nproc) \
-        gd pdo_mysql pdo_pgsql pdo_sqlite \
-        zip bcmath mbstring xml exif opcache pcntl
+    && docker-php-ext-install -j$(nproc) gd
+
+# Install other PHP extensions
+RUN docker-php-ext-install -j$(nproc) \
+    pdo_mysql pdo_pgsql pdo_sqlite \
+    zip bcmath mbstring xml exif opcache pcntl
 
 # Install imagick & redis
 RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
