@@ -19,8 +19,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
 # Install database extensions
 RUN docker-php-ext-install -j$(nproc) pdo_mysql pdo_pgsql pdo_sqlite
 
-# Install utility extensions
-RUN docker-php-ext-install -j$(nproc) zip bcmath mbstring xml exif opcache
+# Install utility extensions (including ftp for flysystem)
+RUN docker-php-ext-install -j$(nproc) zip bcmath mbstring xml exif opcache ftp
 
 # Install imagick & redis via PECL
 RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
@@ -41,11 +41,14 @@ COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 COPY . /var/www/html
 WORKDIR /var/www/html
 
-# Install dependencies and build assets
-RUN composer install --no-dev --optimize-autoloader --no-interaction \
-    && npm install \
-    && npm run production \
-    && chmod -R 775 storage bootstrap/cache \
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-req=ext-ftp
+
+# Build frontend assets
+RUN npm install && npm run production
+
+# Setup permissions and storage link
+RUN chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && php artisan storage:link
 

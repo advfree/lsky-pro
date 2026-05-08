@@ -39,7 +39,8 @@ RUN docker-php-ext-install -j$(nproc) \
     mbstring \
     xml \
     exif \
-    opcache
+    opcache \
+    ftp
 
 # Install imagick
 RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
@@ -70,7 +71,7 @@ WORKDIR /var/www/html
 COPY . .
 
 # Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-req=ext-ftp
 
 # Build frontend assets
 RUN npm install && npm run production
