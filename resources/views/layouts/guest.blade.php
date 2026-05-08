@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="relative min-full">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="relative min-full" x-data="theme()" x-init="initTheme()" :class="{'dark': isDark}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -17,11 +17,13 @@
         <!-- Styles -->
         <link rel="stylesheet" href="{{ asset('css/common.css') }}?t=20220817">
         <link rel="stylesheet" href="{{ asset('css/app.css') }}?t=20220817">
+        <link rel="stylesheet" href="{{ asset('css/dark-theme.css') }}?t=20220817">
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen text-gray-900 bg-gray-100">
             {{ $slot }}
         </div>
+        <x-theme-toggle />
     </body>
     <!-- Scripts -->
     <script src="{{ asset('js/app.js') }}?t=20220817"></script>

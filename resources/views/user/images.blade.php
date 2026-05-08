@@ -105,7 +105,7 @@
                     <p class="text-xs date" title="__human_date__">__date__</p>
                 </div>
             </div>
-            <img alt="__name__" data-original="__url__" src="__thumb_url__" width="__width__" height="__height__">
+            <img alt="__name__" data-original="__url__" src="__thumb_url__" width="__width__" height="__height__" loading="lazy">
         </a>
     </script>
 

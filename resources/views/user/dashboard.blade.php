@@ -3,32 +3,32 @@
 <x-app-layout>
     <div class="my-6 md:my-9">
         <div class="space-y-6 md:space-y-0 md:grid md:grid-cols-2 xl:grid-cols-4 md:gap-x-4 xl:gap-x-8 md:gap-y-4 xl:gap-y-8">
-            <div class="flex bg-white rounded p-4 space-x-4 shadow-custom">
+            <div class="flex bg-white dark:bg-gray-800 rounded p-4 space-x-4 shadow-custom">
                 <i class="fas fa-images text-amber-500 text-5xl"></i>
                 <div class="flex flex-col">
-                    <p class="text-gray-700 text-sm">图片数量</p>
-                    <p class="text-gray-800 font-semibold text-xl">{{ $user->image_num }}</p>
+                    <p class="text-gray-700 dark:text-gray-300 text-sm">图片数量</p>
+                    <p class="text-gray-800 dark:text-gray-100 dark:text-gray-100 font-semibold text-xl">{{ $user->image_num }}</p>
                 </div>
             </div>
-            <div class="flex bg-white rounded p-4 space-x-4 shadow-custom">
+            <div class="flex bg-white dark:bg-gray-800 rounded p-4 space-x-4 shadow-custom">
                 <i class="fas fa-hdd text-red-500 text-5xl"></i>
                 <div class="flex flex-col">
-                    <p class="text-gray-700 text-sm">可用储存</p>
-                    <p class="text-gray-800 font-semibold text-xl">{{ \App\Utils::formatSize(($user->capacity - $user->use_capacity) * 1024) }}</p>
+                    <p class="text-gray-700 dark:text-gray-300 text-sm">可用储存</p>
+                    <p class="text-gray-800 dark:text-gray-100 dark:text-gray-100 font-semibold text-xl">{{ \App\Utils::formatSize(($user->capacity - $user->use_capacity) * 1024) }}</p>
                 </div>
             </div>
-            <div class="flex bg-white rounded p-4 space-x-4 shadow-custom">
+            <div class="flex bg-white dark:bg-gray-800 rounded p-4 space-x-4 shadow-custom">
                 <i class="fas fa-hdd text-green-500 text-5xl"></i>
                 <div class="flex flex-col">
-                    <p class="text-gray-700 text-sm">使用储存</p>
-                    <p class="text-gray-800 font-semibold text-xl">{{ \App\Utils::formatSize($user->use_capacity * 1024) }}</p>
+                    <p class="text-gray-700 dark:text-gray-300 text-sm">使用储存</p>
+                    <p class="text-gray-800 dark:text-gray-100 dark:text-gray-100 font-semibold text-xl">{{ \App\Utils::formatSize($user->use_capacity * 1024) }}</p>
                 </div>
             </div>
-            <div class="flex bg-white rounded p-4 space-x-4 shadow-custom">
+            <div class="flex bg-white dark:bg-gray-800 rounded p-4 space-x-4 shadow-custom">
                 <i class="fas fa-hdd text-emerald-500 text-5xl"></i>
                 <div class="flex flex-col">
-                    <p class="text-gray-700 text-sm">总储存</p>
-                    <p class="text-gray-800 font-semibold text-xl">{{ \App\Utils::formatSize($user->capacity * 1024) }}</p>
+                    <p class="text-gray-700 dark:text-gray-300 text-sm">总储存</p>
+                    <p class="text-gray-800 dark:text-gray-100 dark:text-gray-100 font-semibold text-xl">{{ \App\Utils::formatSize($user->capacity * 1024) }}</p>
                 </div>
             </div>
         </div>
@@ -45,7 +45,7 @@
                                 @foreach ($strategies as $strategy)
                                     <div class="w-full px-4 py-3">
                                         <p>{{ $strategy->name }}</p>
-                                        <span class="text-gray-700 text-sm">{{ $strategy->intro }}</span>
+                                        <span class="text-gray-700 dark:text-gray-300 text-sm">{{ $strategy->intro }}</span>
                                     </div>
                                 @endforeach
                             </div>

@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use AlibabaCloud\Client\AlibabaCloud;
-use AlibabaCloud\Green\Green;
 use App\Enums\ConfigKey;
 use App\Enums\GroupConfigKey;
 use App\Enums\ImagePermission;
@@ -177,6 +175,23 @@ class ImageService
                 $file = new UploadedFile($watermarkImage->basePath(), $file->getClientOriginalName(), $file->getMimeType());
                 $watermarkImage->destroy();
             }
+
+            // 图片压缩
+            if ($configs->get(GroupConfigKey::IsEnableCompress, 1)) {
+                $compressConfigs = collect($configs->get(GroupConfigKey::CompressConfigs, []));
+                $result = $this->compress($file, $compressConfigs);
+                $file = $result['file'];
+            }
+        }
+
+        // 检查之前的压缩结果
+        if (isset($result) && $result['before_size'] != $result['after_size']) {
+            $image->compress_before_size = $result['before_size'] / 1024;
+            $image->compress_after_size = $result['after_size'] / 1024;
+            $image->compress_ratio = $result['before_size'] > 0
+                ? round((1 - $result['after_size'] / $result['before_size']) * 100, 2)
+                : 0;
+            $image->compress_mode = $result['mode'];
         }
 
         $filename = $this->replacePathname(
@@ -631,8 +646,30 @@ class ImageService
         }
     }
 
+    /**
+     * 图片压缩
+     *
+     * @param  UploadedFile  $file
+     * @param  Collection  $configs
+     * @return array
+     */
+    public function compress(UploadedFile $file, Collection $configs): array
+    {
+        return (new ImageCompressionService())->compress($file, $configs);
+    }
+
     protected function replacePathname(string $pathname, UploadedFile $file): string
     {
+        $originalName = $file->getClientOriginalName();
+        $extension = $file->getClientOriginalExtension();
+
+        // Sanitize filename: use basename to prevent path traversal
+        $originalName = basename($originalName);
+        // Remove dangerous characters from filename
+        $originalName = preg_replace('/[^\w\-. ]/u', '_', $originalName);
+
+        $filenameWithoutExt = Str::replaceLast('.' . $extension, '', $originalName);
+
         $array = [
             '{Y}' => date('Y'),
             '{y}' => date('y'),
@@ -644,7 +681,7 @@ class ImageService
             '{md5-16}' => substr(md5(microtime().Str::random()), 0, 16),
             '{str-random-16}' => Str::random(),
             '{str-random-10}' => Str::random(10),
-            '{filename}' => Str::replaceLast('.'.$file->getClientOriginalExtension(), '', $file->getClientOriginalName()),
+            '{filename}' => $filenameWithoutExt,
             '{uid}' => Auth::check() ? Auth::id() : 0,
         ];
         return str_replace(array_keys($array), array_values($array), $pathname);

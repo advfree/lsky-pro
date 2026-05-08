@@ -11,21 +11,21 @@
         <div class="mt-5 md:mt-0 md:col-span-2">
             <ul id="tabs" class="flex space-x-2 text-sm">
                 <li class="group">
-                    <a data-target="basic" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-white group-hover:bg-white">常规配置</a>
+                    <a data-target="basic" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-white dark:bg-gray-800 group-hover:bg-white dark:group-hover:bg-gray-700">常规配置</a>
                 </li>
                 <li class="group">
-                    <a data-target="review" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 group-hover:bg-white">图片审核</a>
+                    <a data-target="review" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 dark:bg-gray-700 group-hover:bg-white dark:group-hover:bg-gray-700">图片审核</a>
                 </li>
                 <li class="group">
-                    <a data-target="protection" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 group-hover:bg-white">原图保护</a>
+                    <a data-target="protection" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 dark:bg-gray-700 group-hover:bg-white dark:group-hover:bg-gray-700">原图保护</a>
                 </li>
                 <li class="group">
-                    <a data-target="watermark" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 group-hover:bg-white">水印配置</a>
+                    <a data-target="watermark" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 dark:bg-gray-700 group-hover:bg-white dark:group-hover:bg-gray-700">水印配置</a>
                 </li>
             </ul>
             <form action="{{ route('admin.group.create') }}" method="POST">
                 <div class="overflow-hidden rounded-md rounded-l-none shadow-custom">
-                    <div class="px-4 py-5 bg-white sm:p-6">
+                    <div class="px-4 py-5 bg-white dark:bg-gray-800 sm:p-6">
                         <div data-tab="basic" class="grid grid-cols-6 gap-6">
                             <div class="col-span-6">
                                 <label for="name" class="block text-sm font-medium text-gray-700"><span class="text-red-600">*</span>组名称</label>

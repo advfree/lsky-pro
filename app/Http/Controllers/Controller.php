@@ -11,6 +11,7 @@ use App\Models\Group;
 use App\Models\Image;
 use App\Models\Strategy;
 use App\Models\User;
+use App\Security\XssSanitizer;
 use App\Services\ImageService;
 use App\Utils;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;

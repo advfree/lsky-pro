@@ -60,4 +60,10 @@ final class GroupConfigKey
 
     /** @var string 图片保存质量 */
     const ImageSaveQuality = 'image_save_quality';
+
+    /** @var string 是否启用压缩 */
+    const IsEnableCompress = 'is_enable_compress';
+
+    /** @var string 压缩配置 */
+    const CompressConfigs = 'compress_configs';
 }

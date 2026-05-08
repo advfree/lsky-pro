@@ -4,7 +4,7 @@
     <div class="p-2">
         <form class="w-full flex items-center justify-center py-3 md:py-5 lg:py-7" action="{{ route('admin.images') }}" method="get">
             <div class="w-full md:w-[70%] lg:w-[60%] flex flex-col">
-                <input class="px-4 py-2 text-md rounded-md bg-white" name="keywords" placeholder="输入关键字回车搜索..." value="{{ request('keywords') }}" />
+                <input class="px-4 py-2 text-md rounded-md bg-white dark:bg-gray-800 dark:text-gray-100" name="keywords" placeholder="输入关键字回车搜索..." value="{{ request('keywords') }}" />
                 <div class="w-full flex justify-end">
                     <a href="javascript:void(0)" id="grammar" class="inline-block mt-2 text-xs text-gray-600">高级搜索语法</a>
                 </div>

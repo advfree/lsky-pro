@@ -112,6 +112,15 @@ return [
         GroupConfigKey::PathNamingRule => '{Y}/{m}/{d}',
         GroupConfigKey::FileNamingRule => '{uniqid}',
         GroupConfigKey::ImageCacheTtl => 2626560,
+        GroupConfigKey::IsEnableCompress => 1,
+        GroupConfigKey::CompressConfigs => [
+            'quality' => 80,
+            'max_width' => 1920,
+            'max_height' => 1080,
+            'target_format' => '',
+            'min_file_size' => 10240,
+            'skip_extensions' => ['gif', 'svg', 'ico'],
+        ],
     ],
     'user' => [
         UserConfigKey::DefaultAlbum => 0,

@@ -6,27 +6,27 @@
 
 <x-app-layout>
     <div class="my-6 md:my-9">
-        <p class="mb-3 font-semibold text-lg text-gray-700">通用</p>
+        <p class="mb-3 font-semibold text-lg text-gray-700 dark:text-gray-300">通用</p>
         <form action="{{ route('admin.settings.save') }}">
-            <div class="relative p-4 rounded-md bg-white mb-8 space-y-4 shadow-custom">
+            <div class="relative p-4 rounded-md bg-white dark:bg-gray-800 mb-8 space-y-4 shadow-custom">
                 <div>
-                    <label for="app_name" class="block text-sm font-medium text-gray-700"><span class="text-red-600">*</span>应用名称</label>
+                    <label for="app_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300"><span class="text-red-600">*</span>应用名称</label>
                     <x-input type="text" name="app_name" id="app_name" value="{{ $configs->get('app_name') }}" placeholder="请输入应用名称"/>
                 </div>
                 <div>
-                    <label for="site_keywords" class="block text-sm font-medium text-gray-700">网站关键字</label>
+                    <label for="site_keywords" class="block text-sm font-medium text-gray-700 dark:text-gray-300">网站关键字</label>
                     <x-textarea type="text" name="site_keywords" id="site_keywords" placeholder="请输入网站关键字">{{ $configs->get('site_keywords') }}</x-textarea>
                 </div>
                 <div>
-                    <label for="site_description" class="block text-sm font-medium text-gray-700">网站描述</label>
+                    <label for="site_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">网站描述</label>
                     <x-textarea type="text" name="site_description" id="site_description" placeholder="请输入网站描述">{{ $configs->get('site_description') }}</x-textarea>
                 </div>
                 <div>
-                    <label for="icp_no" class="block text-sm font-medium text-gray-700">备案号</label>
+                    <label for="icp_no" class="block text-sm font-medium text-gray-700 dark:text-gray-300">备案号</label>
                     <x-input type="text" name="icp_no" id="icp_no" value="{{ $configs->get('icp_no') }}" placeholder="请输入备案号"/>
                 </div>
                 <div>
-                    <label for="site_notice" class="block text-sm font-medium text-gray-700">网站公告</label>
+                    <label for="site_notice" class="block text-sm font-medium text-gray-700 dark:text-gray-300">网站公告</label>
                     <x-textarea type="text" name="site_notice" id="site_notice" placeholder="首页弹出公告，支持 Markdown，不设置请留空。" rows="7">{{ $configs->get('site_notice') }}</x-textarea>
                 </div>
 
@@ -64,7 +64,7 @@
         <form action="{{ route('admin.settings.save') }}">
             <div class="relative p-4 rounded-md bg-white mb-8 space-y-4 shadow-custom">
                 <div>
-                    <label for="user_initial_capacity" class="block text-sm font-medium text-gray-700">用户初始容量(kb)</label>
+                    <label for="user_initial_capacity" class="block text-sm font-medium text-gray-700 dark:text-gray-300">用户初始容量(kb)</label>
                     <x-input type="number" name="user_initial_capacity" id="user_initial_capacity" step="0.01" value="{{ $configs->get('user_initial_capacity') }}" placeholder="请输入用户初始容量(kb)"/>
                 </div>
 
@@ -83,35 +83,35 @@
             <div class="mb-4 hidden" data-mailer-driver="smtp">
                 <form action="{{ route('admin.settings.save') }}" class="space-y-4">
                     <div>
-                        <label for="mail[mailers][smtp][host]" class="block text-sm font-medium text-gray-700"><span class="text-red-600">*</span>主机地址</label>
+                        <label for="mail[mailers][smtp][host]" class="block text-sm font-medium text-gray-700 dark:text-gray-300"><span class="text-red-600">*</span>主机地址</label>
                         <x-input type="text" name="mail[mailers][smtp][host]" id="mail[mailers][smtp][host]" value="{{ $configs['mail']['mailers']['smtp']['host'] ?? '' }}" placeholder="请输入 SMTP 主机地址"/>
                     </div>
                     <div>
-                        <label for="mail[mailers][smtp][port]" class="block text-sm font-medium text-gray-700"><span class="text-red-600">*</span>连接端口</label>
+                        <label for="mail[mailers][smtp][port]" class="block text-sm font-medium text-gray-700 dark:text-gray-300"><span class="text-red-600">*</span>连接端口</label>
                         <x-input type="number" name="mail[mailers][smtp][port]" id="mail[mailers][smtp][port]" value="{{ $configs['mail']['mailers']['smtp']['port'] ?? 587 }}" placeholder="请输入 SMTP 主机连接端口"/>
                     </div>
                     <div>
-                        <label for="mail[mailers][smtp][username]" class="block text-sm font-medium text-gray-700"><span class="text-red-600">*</span>用户名</label>
+                        <label for="mail[mailers][smtp][username]" class="block text-sm font-medium text-gray-700 dark:text-gray-300"><span class="text-red-600">*</span>用户名</label>
                         <x-input type="text" name="mail[mailers][smtp][username]" id="mail[mailers][smtp][username]" value="{{ $configs['mail']['mailers']['smtp']['username'] ?? '' }}" placeholder="请输入用户名"/>
                     </div>
                     <div>
-                        <label for="mail[mailers][smtp][password]" class="block text-sm font-medium text-gray-700"><span class="text-red-600">*</span>密码</label>
+                        <label for="mail[mailers][smtp][password]" class="block text-sm font-medium text-gray-700 dark:text-gray-300"><span class="text-red-600">*</span>密码</label>
                         <x-input type="password" name="mail[mailers][smtp][password]" id="mail[mailers][smtp][password]" value="{{ $configs['mail']['mailers']['smtp']['password'] ?? '' }}" placeholder="请输入密码"/>
                     </div>
                     <div>
-                        <label for="mail[mailers][smtp][encryption]" class="block text-sm font-medium text-gray-700">加密方式</label>
+                        <label for="mail[mailers][smtp][encryption]" class="block text-sm font-medium text-gray-700 dark:text-gray-300">加密方式</label>
                         <x-input type="text" name="mail[mailers][smtp][encryption]" id="mail[mailers][smtp][encryption]" value="{{ $configs['mail']['mailers']['smtp']['encryption'] ?? '' }}" placeholder="请输入加密方式(ssl, tls)"/>
                     </div>
                     <div>
-                        <label for="mail[mailers][smtp][timeout]" class="block text-sm font-medium text-gray-700">连接超时时间(秒)</label>
+                        <label for="mail[mailers][smtp][timeout]" class="block text-sm font-medium text-gray-700 dark:text-gray-300">连接超时时间(秒)</label>
                         <x-input type="number" name="mail[mailers][smtp][timeout]" id="mail[mailers][smtp][timeout]" value="{{ $configs['mail']['mailers']['smtp']['timeout'] ?? 10 }}" placeholder="请输入连接超时时间(秒)"/>
                     </div>
                     <div>
-                        <label for="mail[mailers][smtp][from_address]" class="block text-sm font-medium text-gray-700">发件人地址</label>
+                        <label for="mail[mailers][smtp][from_address]" class="block text-sm font-medium text-gray-700 dark:text-gray-300">发件人地址</label>
                         <x-input type="email" name="mail[from][address]" id="mail[from][address]" value="{{ $configs['mail']['from']['address'] ?? '' }}" placeholder="请输入发件人邮箱地址"/>
                     </div>
                     <div>
-                        <label for="mail[mailers][smtp][from_name]" class="block text-sm font-medium text-gray-700">发件人名称</label>
+                        <label for="mail[mailers][smtp][from_name]" class="block text-sm font-medium text-gray-700 dark:text-gray-300">发件人名称</label>
                         <x-input type="text" name="mail[from][name]" id="mail[from][name]" value="{{ $configs['mail']['from']['name'] ?? '' }}" placeholder="请输入发件人名称"/>
                     </div>
 

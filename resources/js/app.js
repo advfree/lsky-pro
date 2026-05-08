@@ -9,6 +9,36 @@ Alpine.store('modal', Modal);
 
 window.Alpine = Alpine;
 
+// Theme management
+document.addEventListener('alpine:init', () => {
+    Alpine.data('theme', () => ({
+        isDark: false,
+        initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                this.isDark = savedTheme === 'dark';
+            } else {
+                this.isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            }
+            if (this.isDark) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        },
+        toggle() {
+            this.isDark = !this.isDark;
+            if (this.isDark) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+    }));
+});
+
 Alpine.start();
 
 window.utils = {

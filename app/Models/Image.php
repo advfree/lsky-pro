@@ -70,6 +70,10 @@ class Image extends Model
         'permission',
         'is_unhealthy',
         'uploaded_ip',
+        'compress_before_size',
+        'compress_after_size',
+        'compress_ratio',
+        'compress_mode',
     ];
 
     protected $hidden = [
@@ -90,6 +94,9 @@ class Image extends Model
         'size' => 'float',
         'is_unhealthy' => 'bool',
         'permission' => 'integer',
+        'compress_before_size' => 'float',
+        'compress_after_size' => 'float',
+        'compress_ratio' => 'float',
     ];
 
     protected ?Filesystem $filesystem = null;
