@@ -77,16 +77,73 @@
 
 ## 🚀 快速部署
 
-### Docker 部署（推荐）
+### 🐳 方案一：Docker Desktop 一键安装（最快）
+
+如果你已安装 [Docker Desktop](https://www.docker.com/products/docker-desktop/)，直接一条命令启动：
+
+```bash
+docker run -d \
+  --name lsky-pro \
+  -p 8080:80 \
+  -v lsky-storage:/var/www/html/storage \
+  -v lsky-uploads:/var/www/html/public \
+  -e APP_URL=http://localhost:8080 \
+  -e DB_CONNECTION=sqlite \
+  -e CACHE_DRIVER=file \
+  ghcr.io/advfree/lsky-pro:latest
+```
+
+> 启动后访问 **http://localhost:8080** 按安装向导完成初始化。  
+> 以上命令使用 SQLite 数据库，无需额外配置数据库服务，开箱即用。  
+> 停止容器：`docker stop lsky-pro && docker rm lsky-pro`
+
+### 🐳 方案二：Docker Compose 完整部署（生产推荐）
+
+克隆仓库并使用 Docker Compose 启动完整环境（含 MySQL + Redis）：
 
 ```bash
 git clone https://github.com/advfree/lsky-pro.git
 cd lsky-pro
 
-# 编辑 .env 文件配置数据库密码后启动
+# 创建 .env 配置文件
+cp .env.example .env
+# ⚠️ 编辑 .env，至少填写以下关键配置：
+#   DB_PASSWORD=你的数据库密码
+#   APP_KEY= （运行下一步自动生成）
+
+# 生成应用密钥
+php -r "echo 'APP_KEY='.base64_encode(random_bytes(32));" >> .env
+
+# 启动所有服务（后台运行）
 docker-compose up -d
 
+# 查看启动状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f
+
 # 访问 http://localhost:8080 按安装向导完成初始化
+```
+
+> **首次启动后**，进入容器执行数据库迁移：  
+> `docker exec lsky-app php artisan migrate --seed`
+
+**常用 Compose 命令：**
+
+```bash
+# 停止服务
+docker-compose down
+
+# 停止并删除数据卷（⚠️ 会清空数据库和上传文件）
+docker-compose down -v
+
+# 重新构建镜像（代码更新后）
+docker-compose build --no-cache
+
+# 更新到最新代码
+git pull
+docker-compose up -d --build
 ```
 
 ### 手动部署
