@@ -82,20 +82,20 @@
 如果你已安装 [Docker Desktop](https://www.docker.com/products/docker-desktop/)，直接一条命令启动：
 
 ```bash
-docker run -d \
-  --name lsky-pro \
-  -p 8080:80 \
-  -v lsky-storage:/var/www/html/storage \
-  -v lsky-uploads:/var/www/html/public \
-  -e APP_URL=http://localhost:8080 \
-  -e DB_CONNECTION=sqlite \
-  -e CACHE_DRIVER=file \
-  ghcr.io/advfree/lsky-pro:latest
+docker run -d --name lsky-pro -p 8080:80 -v lsky-storage:/var/www/html/storage -v lsky-uploads:/var/www/html/public -e APP_URL=http://localhost:8080 -e DB_CONNECTION=sqlite -e CACHE_DRIVER=file ghcr.io/advfree/lsky-pro:latest
 ```
 
+> 镜像由 GitHub Actions 自动构建并推送至 `ghcr.io`，每次推送 master 分支后自动更新。  
 > 启动后访问 **http://localhost:8080** 按安装向导完成初始化。  
-> 以上命令使用 SQLite 数据库，无需额外配置数据库服务，开箱即用。  
+> 使用 SQLite 数据库，无需额外配置，开箱即用。  
 > 停止容器：`docker stop lsky-pro && docker rm lsky-pro`
+
+也可从源码**本地构建**：
+
+```bash
+docker build -t lsky-pro .
+docker run -d --name lsky-pro -p 8080:80 -e APP_URL=http://localhost:8080 -e DB_CONNECTION=sqlite lsky-pro
+```
 
 ### 🐳 方案二：Docker Compose 完整部署（生产推荐）
 
