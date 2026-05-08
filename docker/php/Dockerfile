@@ -20,7 +20,8 @@ RUN apk add --no-cache \
     imagemagick \
     jpegoptim \
     optipng \
-    supervisor
+    supervisor \
+    sqlite-dev postgresql-dev
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd \

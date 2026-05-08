@@ -10,7 +10,7 @@ RUN apk add --no-cache \
     libzip-dev oniguruma-dev libxml2-dev \
     imagemagick-dev imagemagick \
     jpegoptim optipng supervisor \
-    sqlite-dev
+    sqlite-dev postgresql-dev
 
 # Install GD extension
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
