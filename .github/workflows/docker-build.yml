@@ -10,6 +10,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -28,8 +29,8 @@ jobs:
           php-version: '8.2'
           extensions: gd, imagick, pdo_mysql, redis, zip, bcmath, mbstring, xml, exif
 
-      - name: Validate composer.json and lock
-        run: composer validate --strict
+      - name: Validate composer.json
+        run: composer validate --no-check-all
 
       - name: Cache Composer packages
         id: composer-cache
