@@ -48,7 +48,8 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --ignore-pl
 RUN npm install && npm run production
 
 # Setup permissions and storage link
-RUN chmod -R 775 storage bootstrap/cache \
+RUN mkdir -p /var/log/supervisor \
+    && chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && php artisan storage:link
 
