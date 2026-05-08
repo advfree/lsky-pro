@@ -18,6 +18,9 @@
                 <li class="group">
                     <a data-target="watermark" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 group-hover:bg-white">水印配置</a>
                 </li>
+                <li class="group">
+                    <a data-target="compress" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 group-hover:bg-white">压缩配置</a>
+                </li>
             </ul>
             <form action="{{ route('admin.group.update', ['id' => $group->id]) }}" method="POST">
                 <div class="overflow-hidden rounded-md rounded-l-none shadow-custom">
@@ -312,6 +315,52 @@
                                         <x-input type="number" name="configs[watermark_configs][drivers][image][y]" id="configs[watermark_configs][drivers][image][y]" autocomplete="y" placeholder="Y轴偏移量" value="{{ $group->configs['watermark_configs']['drivers']['image']['y'] ?? '' }}" />
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div data-tab="compress" class="hidden grid grid-cols-6 gap-6">
+                            <p class="mb-3 text-blue-600 text-sm col-span-6"><i class="fas fa-info-circle"></i> 开启后，上传的图片将自动进行压缩优化，大幅减小文件体积，提升页面加载速度。</p>
+                            <div class="col-span-6 mb-4">
+                                <x-fieldset title="启用自动压缩" faq="开启后替代原有的图片保存质量设置，支持尺寸缩放 + 质量压缩 + 格式转换三步一体。">
+                                    <x-switch id="configs[is_enable_compress]" name="configs[is_enable_compress]" value="1" :checked="(bool)$group->configs->get('is_enable_compress', true)"></x-switch>
+                                </x-fieldset>
+                            </div>
+                            <div class="col-span-6 sm:col-span-3">
+                                <label for="configs[compress_configs][quality]" class="block text-sm font-medium text-gray-700">压缩质量</label>
+                                <x-input type="number" name="configs[compress_configs][quality]" id="configs[compress_configs][quality]" min="1" max="100" placeholder="1-100，默认 80" value="{{ $group->configs['compress_configs']['quality'] ?? 80 }}" />
+                                <small class="text-gray-500"><i class="fas fa-exclamation-circle"></i> 数值越低压缩越强，文件越小</small>
+                            </div>
+                            <div class="col-span-6 sm:col-span-3">
+                                <label for="configs[compress_configs][max_width]" class="block text-sm font-medium text-gray-700">最大宽度(px)</label>
+                                <x-input type="number" name="configs[compress_configs][max_width]" id="configs[compress_configs][max_width]" placeholder="超过此宽度的图片等比缩放，默认 1920" value="{{ $group->configs['compress_configs']['max_width'] ?? 1920 }}" />
+                            </div>
+                            <div class="col-span-6 sm:col-span-3">
+                                <label for="configs[compress_configs][max_height]" class="block text-sm font-medium text-gray-700">最大高度(px)</label>
+                                <x-input type="number" name="configs[compress_configs][max_height]" id="configs[compress_configs][max_height]" placeholder="超过此高度的图片等比缩放，默认 1080" value="{{ $group->configs['compress_configs']['max_height'] ?? 1080 }}" />
+                            </div>
+                            <div class="col-span-6 sm:col-span-3">
+                                <label for="configs[compress_configs][target_format]" class="block text-sm font-medium text-gray-700">目标格式</label>
+                                <x-select id="configs[compress_configs][target_format]" name="configs[compress_configs][target_format]">
+                                    <option value="">不转换格式</option>
+                                    <option value="webp" @selected(($group->configs['compress_configs']['target_format'] ?? '') === 'webp')>WebP（推荐）</option>
+                                    <option value="jpg" @selected(($group->configs['compress_configs']['target_format'] ?? '') === 'jpg')>JPEG</option>
+                                    <option value="png" @selected(($group->configs['compress_configs']['target_format'] ?? '') === 'png')>PNG</option>
+                                </x-select>
+                                <small class="text-gray-500"><i class="fas fa-exclamation-circle"></i> WebP 格式可大幅减小体积，浏览器兼容性良好</small>
+                            </div>
+                            <div class="col-span-6 sm:col-span-3">
+                                <label for="configs[compress_configs][min_file_size]" class="block text-sm font-medium text-gray-700">最小压缩文件大小(KB)</label>
+                                <x-input type="number" name="configs[compress_configs][min_file_size]" id="configs[compress_configs][min_file_size]" placeholder="低于此大小的文件跳过压缩，默认 10" value="{{ $group->configs['compress_configs']['min_file_size'] ?? 10 }}" />
+                                <small class="text-gray-500"><i class="fas fa-exclamation-circle"></i> 单位 KB，小于此值的文件不压缩</small>
+                            </div>
+                            <div class="col-span-6">
+                                <x-fieldset title="跳过压缩的格式">
+                                    @foreach(['gif', 'svg', 'ico', 'bmp', 'tif', 'psd'] as $ext)
+                                        <x-fieldset-checkbox name="configs[compress_configs][skip_extensions][]" value="{{ $ext }}" :checked="in_array($ext, ($group->configs['compress_configs']['skip_extensions'] ?? ['gif','svg','ico']))">
+                                            {{ strtoupper($ext) }}
+                                        </x-fieldset-checkbox>
+                                    @endforeach
+                                </x-fieldset>
                             </div>
                         </div>
                     </div>
