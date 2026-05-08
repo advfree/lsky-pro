@@ -16,15 +16,7 @@ storage/debugbar/*
 !storage/framework/sessions/.gitkeep
 !storage/framework/views/.gitkeep
 tests
-docker
 docs
 *.md
-.dockerignore
-Dockerfile
-docker-compose.yml
-webpack.mix.js
-package-lock.json
-composer.lock
-phpunit.xml
 .editorconfig
 .styleci.yml
