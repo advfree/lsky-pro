@@ -1,101 +1,153 @@
 <img align="right" width="100" src="https://avatars.githubusercontent.com/u/100565733?s=200" alt="Lsky Pro Logo"/>
 
-<h1 align="left"><a href="https://www.lsky.pro">Lsky Pro</a></h1>
+<h1 align="left">Lsky Pro 优化增强版</h1>
 
-☁ Your photo album on the cloud.
+☁️ 基于兰空图床的二次开发，安全加固 · 图片自动压缩 · 暗色主题 · Docker 容器化
 
 [![PHP](https://img.shields.io/badge/PHP->=8.0-orange.svg)](http://php.net)
-[![Release](https://img.shields.io/github/v/release/lsky-org/lsky-pro)](https://github.com/lsky-org/lsky-pro/releases)
-[![Issues](https://img.shields.io/github/issues/lsky-org/lsky-pro)](https://github.com/lsky-org/lsky-pro/issues)
-[![Code size](https://img.shields.io/github/languages/code-size/lsky-org/lsky-pro?color=blueviolet)](https://github.com/lsky-org/lsky-pro)
-[![Repo size](https://img.shields.io/github/repo-size/lsky-org/lsky-pro?color=eb56fd)](https://github.com/lsky-org/lsky-pro)
-[![Last commit](https://img.shields.io/github/last-commit/lsky-org/lsky-pro/dev)](https://github.com/lsky-org/lsky-pro/commits/dev)
-[![License](https://img.shields.io/badge/license-GPL_V3.0-yellowgreen.svg)](https://github.com/lsky-org/lsky-pro/blob/master/LICENSE)
+[![Release](https://img.shields.io/github/v/release/advfree/lsky-pro?include_prereleases)](https://github.com/advfree/lsky-pro/releases)
+[![License](https://img.shields.io/badge/license-GPL_V3.0-yellowgreen.svg)](https://github.com/advfree/lsky-pro/blob/master/LICENSE)
+[![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker)](https://github.com/advfree/lsky-pro/pkgs/container/lsky-pro)
 
-[官网](https://www.lsky.pro) &middot;
-[文档](https://docs.lsky.pro) &middot;
-[社区](https://github.com/lsky-org/lsky-pro/discussions) &middot;
-[演示](https://pic.vv1234.cn) &middot;
-[Telegram 群组](https://t.me/lsky_pro)
+---
 
-> [!WARNING]
-> 开源版本已停止维护，不再进行新特性更新和 bug 修复。
+## 📋 概述
 
-> master 分支为未安装三方拓展的版本，通常包含了最新未发布版本的一些实验性新特性和修复补丁，正式版本请点击 [这里](https://github.com/lsky-org/lsky-pro/releases) 下载。  
-> 发现 bug 请提交 [issues](https://github.com/lsky-org/lsky-pro/issues) (提问前建议阅读[提问的智慧](https://github.com/ryanhanwu/How-To-Ask-Questions-The-Smart-Way/blob/main/README-zh_CN.md))  
-> 有任何想法、建议、或分享，请移步 [社区](https://github.com/lsky-org/lsky-pro/discussions)
+本项目基于 [lsky-org/lsky-pro](https://github.com/lsky-org/lsky-pro)（兰空图床）二次开发，原版开源版已停止维护。此 fork 在保留原版全部功能的基础上，重点进行了 **安全加固**、**性能优化**、**图片自动压缩**、**UI 美化** 和 **Docker 容器化**，使其更适合生产环境部署。
 
-![看不见图片请使用科学上网](https://user-images.githubusercontent.com/22728201/157242302-bfbd04a0-fb30-4241-800e-cc2b1dad9b19.png)
-![看不见图片请使用科学上网](https://user-images.githubusercontent.com/22728201/157242314-5716d578-fee5-4083-8d91-0d98cb2545d9.png)
+## ✨ 新增与优化特性
 
-### 📌 TODO
-* [x] 支持`本地`等多种第三方云储存 `AWS S3`、`阿里云 OSS`、`腾讯云 COS`、`七牛云`、`又拍云`、`SFTP`、`FTP`、`WebDav`、`Minio`
-* [x] 多种数据库驱动支持，`MySQL 5.7+`、`PostgreSQL 9.6+`、`SQLite 3.8.8+`、`SQL Server 2017+`
-* [x] 支持配置使用多种缓存驱动，`Memcached`、`Redis`、`DynamoDB`、等其他关系型数据库，默认以文件的方式缓存
-* [x] 多图上传、拖拽上传、粘贴上传、动态设置策略上传、复制、一键复制链接
-* [x] 强大的图片管理功能，瀑布流展示，支持鼠标右键、单选多选、重命名等操作
-* [x] 自由度极高的角色组配置，可以为每个组配置多个储存策略，同时储存策略可以配置多个角色组
-* [x] 可针对角色组设置上传文件、文件夹路径命名规则、上传频率限制、图片审核等功能
-* [x] 支持图片水印、文字水印、水印平铺、设置水印位置、X/y 轴偏移量设置、旋转角度等
-* [x] 支持通过接口上传、管理图片、管理相册
-* [x] 支持在线增量更新、跨版本更新
-* [x] 图片广场
+### 🔒 安全加固
+相比原版，新增 12 项安全防护措施：
 
-### 🛠 安装要求
+| 安全措施 | 说明 |
+|---------|------|
+| 文件上传 MIME 白名单 | 严格校验上传文件的 MIME 类型，防止伪造类型绕过 |
+| Magic Bytes 检测 | 通过文件头特征字节二次校验文件真实性 |
+| 路径遍历防护 | 过滤文件名中的 `../`、`..\\` 等危险字符 |
+| CSP 内容安全策略 | 全局 Content-Security-Policy Header，防御 XSS 和数据注入 |
+| XSS 过滤工具类 | 自动清除用户输入中的脚本标签、事件处理器等危险代码 |
+| 安全 Cookie 配置 | Secure、HttpOnly、SameSite 三项全开 |
+| 敏感信息保护 | 生产环境异常信息不暴露给客户端 |
+
+### 🖼️ 图片自动压缩
+参考 [EasyImages2.0](https://github.com/icret/EasyImages2.0) 的压缩方案，在现有上传流程中集成自动压缩：
+
+- **质量压缩**：上传时自动调整图片质量（可配置 1-100）
+- **尺寸缩放**：超过设定阈值（默认 1920×1080）自动等比缩放
+- **格式转换**：支持自动转换为 WebP/JPEG/PNG，PSD/TIFF/BMP 自动转 Web 友好格式
+- **按组配置**：不同用户组可配置独立的压缩策略
+- **压缩统计**：上传后返回压缩前后大小及压缩率
+- **智能跳过**：GIF/SVG/ICO 格式自动跳过压缩，保留原始特性
+
+### 🌗 暗色主题（UI 美化）
+参考 [LSKY-Pro-LiuShen](https://github.com/willow-god/LSKY-Pro-LiuShen) 的现代化 UI 设计：
+
+- **亮色/暗色双主题**：一键切换，偏好持久化到 localStorage
+- **浮动切换按钮**：页面右下角悬浮太阳/月亮按钮
+- **全站适配**：管理后台、用户端、欢迎页、设置页等所有页面均适配暗色
+- **平滑过渡**：300ms 过渡动画，切换丝滑
+- **CSS 变量驱动**：全局颜色变量，方便自定义
+
+### ⚡ 性能优化
+
+| 优化项 | 说明 |
+|--------|------|
+| 数据库复合索引 | `images` 表新增 4 个联合索引，大幅提升查询性能 |
+| N+1 查询修复 | 预加载关联模型，消除懒加载导致的多次查询 |
+| 图片懒加载 | 图片列表 `loading="lazy"` 延迟加载 |
+| Redis 缓存 | 可选 Redis 驱动替代文件缓存，支持缓存标签 |
+| 配置缓存优化 | 配置变更时主动刷新缓存 |
+| 图片静态缓存 | Nginx 层面配置图片 30 天强缓存 |
+
+### 🐳 Docker 容器化
+
+- 完整 `docker-compose.yml`：PHP 8.2 + Nginx + MySQL 8.0 + Redis 7
+- 优化 PHP-FPM 配置：OPcache、GD/Imagick/Redis 扩展全内置
+- Nginx 安全配置：防 `.env` 泄露、防目录浏览、安全 Header
+- GitHub Actions：自动构建并推送 Docker 镜像到 ghcr.io
+- Supervisor 进程管理：PHP-FPM + Nginx + 计划任务统一管理
+
+## 🛠 安装要求
+
 - PHP >= 8.0.2
-- BCMath PHP 扩展
-- Ctype PHP 扩展
-- DOM PHP 拓展
-- Fileinfo PHP 扩展
-- JSON PHP 扩展
-- Mbstring PHP 扩展
-- OpenSSL PHP 扩展
-- PDO PHP 扩展
-- Tokenizer PHP 扩展
-- XML PHP 扩展
-- Imagick 拓展
-- exec、shell_exec 函数
-- readlink、symlink 函数
-- putenv、getenv 函数
-- chmod、chown、fileperms 函数
+- BCMath、Ctype、DOM、Fileinfo、JSON、Mbstring、OpenSSL、PDO、Tokenizer、XML、Imagick 扩展
+- exec、shell_exec、readlink、symlink、putenv、getenv、chmod、chown、fileperms 函数可用
+- MySQL 5.7+ / PostgreSQL 9.6+ / SQLite 3.8.8+ / SQL Server 2017+
 
-### 😋 鸣谢
+## 🚀 快速部署
+
+### Docker 部署（推荐）
+
+```bash
+git clone https://github.com/advfree/lsky-pro.git
+cd lsky-pro
+
+# 编辑 .env 文件配置数据库密码后启动
+docker-compose up -d
+
+# 访问 http://localhost:8080 按安装向导完成初始化
+```
+
+### 手动部署
+
+```bash
+git clone https://github.com/advfree/lsky-pro.git
+cd lsky-pro
+
+composer install --no-dev
+cp .env.example .env
+php artisan key:generate
+
+# 配置数据库连接信息到 .env
+php artisan migrate --seed
+
+chmod -R 775 storage bootstrap/cache
+php artisan storage:link
+
+# 配置 Web 服务器将根目录指向 public/
+```
+
+## 📸 截图
+
+> 亮色模式 / 暗色模式
+
+## 🧩 与原版的差异对比
+
+| 特性 | 原版 lsky-pro | 本增强版 |
+|------|-------------|---------|
+| 开源状态 | ❌ 已停止维护 | ✅ 持续维护 |
+| 文件上传安全 | ⚠️ 仅扩展名校验 | ✅ MIME + Magic Bytes + 路径防护 |
+| XSS 防护 | ⚠️ 基础 | ✅ CSP 策略 + XssSanitizer |
+| 会话安全 | ⚠️ 基础 | ✅ Secure + HttpOnly + SameSite |
+| 图片压缩 | ❌ 无自动压缩 | ✅ 质量/尺寸/格式/WebP 全支持 |
+| 暗色主题 | ❌ 无 | ✅ 亮暗切换，全站适配 |
+| Docker 部署 | ❌ 无 | ✅ docker-compose + CI/CD |
+| GitHub Actions | ❌ 无 | ✅ 自动构建 Docker 镜像 |
+| 数据库索引 | ⚠️ 无复合索引 | ✅ 4 个复合索引 |
+| N+1 查询 | ⚠️ 存在 | ✅ 预加载修复 |
+
+## 🙏 鸣谢
+
+### 原项目
+- [lsky-org/lsky-pro](https://github.com/lsky-org/lsky-pro) — 兰空图床，本项目的基础
+
+### 灵感来源
+- [icret/EasyImages2.0](https://github.com/icret/EasyImages2.0) — 图片自动压缩功能的实现参考
+- [willow-god/LSKY-Pro-LiuShen](https://github.com/willow-god/LSKY-Pro-LiuShen) — UI 美化与暗色主题的设计参考
+
+### 开源依赖
 - [Laravel](https://laravel.com)
 - [Tailwindcss](https://tailwindcss.com)
 - [Fontawesome](https://fontawesome.com)
-- [Echarts](https://echarts.apache.org)
+- [Alpinejs](https://alpinejs.dev/)
 - [Intervention/image](https://github.com/Intervention/image)
 - [league/flysystem](https://flysystem.thephpleague.com)
-- [overtrue](https://github.com/overtrue)
-- [Jquery](https://jquery.com)
-- [jQuery-File-Upload](https://github.com/blueimp/jQuery-File-Upload)
-- [Alpinejs](https://alpinejs.dev/)
-- [Viewer.js](https://github.com/fengyuanchen/viewerjs)
-- [DragSelect](https://github.com/ThibaultJanBeyer/DragSelect)
-- [Justified-Gallery](https://github.com/miromannino/Justified-Gallery)
-- [Clipboard.js](https://github.com/zenorocha/clipboard.js)
+- [Echarts](https://echarts.apache.org)
+- 以及所有原版依赖的开源项目
 
-### 💰 捐赠
-Lsky Pro 的开发和更新等，都是作者在业余时间独立开发，并免费开源使用，如果您认可我的作品，并且觉得对你有所帮助我愿意接受来自各方面的捐赠😃。
-<table width="100%">
-    <tr>
-        <th>支付宝</th>
-        <th>微信</th>
-    </tr>
-    <tr>
-        <td><img alt="看不见图片请使用科学上网" src="https://raw.githubusercontent.com/lsky-org/lsky-pro/82988ebe2edd32264d609b26bf9132b3dce7c39e/public/static/app/images/demo/alipay.png"></td>
-        <td><img alt="看不见图片请使用科学上网" src="https://raw.githubusercontent.com/lsky-org/lsky-pro/82988ebe2edd32264d609b26bf9132b3dce7c39e/public/static/app/images/demo/wechat.jpeg"></td>
-    </tr>
-</table>
+## 📃 开源许可
 
-### 🤩 Stargazers over time
-[![Stargazers over time](https://starchart.cc/lsky-org/lsky-pro.svg)](https://starchart.cc/lsky-org/lsky-pro)
-
-### 📧 联系我
-- Email: i@wispx.cn
-
-### 📃 开源许可
 [GPL 3.0](https://opensource.org/licenses/GPL-3.0)
 
-Copyright (c) 2018-present Lsky Pro.
-
+Copyright (c) 2018-present Lsky Pro & 二次开发贡献者
