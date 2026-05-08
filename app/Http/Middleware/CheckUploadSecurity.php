@@ -81,7 +81,7 @@ class CheckUploadSecurity
             }
 
             // Check path traversal in filename
-            if (preg_match('/\.\.(\/|\\\)/', $originalName)) {
+            if (preg_match('/\.\.(\/|\\\\)/', $originalName)) {
                 throw new UploadException('文件名不合法');
             }
 

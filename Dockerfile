@@ -8,6 +8,7 @@ RUN apk add --no-cache \
     bash \
     curl \
     git \
+    nginx \
     libpng-dev \
     libjpeg-turbo-dev \
     freetype-dev \
@@ -59,8 +60,13 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction \
     && chown -R www-data:www-data storage bootstrap/cache \
     && php artisan storage:link
 
-COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
+# Copy Nginx config
+COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf 2>/dev/null || \
+  mkdir -p /etc/nginx/http.d && cp docker/nginx/default.conf /etc/nginx/http.d/default.conf
+
+# Copy supervisor config
+COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 EXPOSE 80
 
-CMD ["php", "artisan", "octane:start", "--server=roadrunner", "--host=0.0.0.0", "--port=80"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
