@@ -151,18 +151,25 @@ class ImageService
 
         // 图片处理，跳过 ico gif svg
         if (! in_array($extension, ['ico', 'gif', 'svg'])) {
-            // 图片保存质量与格式
-            $quality = $configs->get(GroupConfigKey::ImageSaveQuality, 75);
-            $format = $configs->get(GroupConfigKey::ImageSaveFormat);
-            if ($quality < 100 || $format) {
-                // 获取拓展名，判断是否需要转换
-                $format = $format ?: $extension;
-                $filename = Str::replaceLast($extension, $format, $file->getClientOriginalName());
-                $handleImage = InterventionImage::make($file)->save('tmp_' . md5_file($file->getRealPath()), $quality);
-                $file = new UploadedFile($handleImage->basePath(), $filename, $handleImage->mime());
-                // 重新设置拓展名
-                $extension = $format;
-                $handleImage->destroy();
+            // 是否启用自动压缩（替代原有的质量/格式处理）
+            if ($configs->get(GroupConfigKey::IsEnableCompress, 1)) {
+                $compressConfigs = collect($configs->get(GroupConfigKey::CompressConfigs, []));
+                $result = $this->compress($file, $compressConfigs);
+                $file = $result['file'];
+                // 压缩可能改变了格式，更新扩展名
+                $extension = strtolower($file->getClientOriginalExtension());
+            } else {
+                // 原有图片保存质量与格式（未启用压缩时回退）
+                $quality = $configs->get(GroupConfigKey::ImageSaveQuality, 75);
+                $format = $configs->get(GroupConfigKey::ImageSaveFormat);
+                if ($quality < 100 || $format) {
+                    $format = $format ?: $extension;
+                    $filename = Str::replaceLast($extension, $format, $file->getClientOriginalName());
+                    $handleImage = InterventionImage::make($file)->save('tmp_' . md5_file($file->getRealPath()), $quality);
+                    $file = new UploadedFile($handleImage->basePath(), $filename, $handleImage->mime());
+                    $extension = $format;
+                    $handleImage->destroy();
+                }
             }
 
             // 是否启用水印，覆盖原图片
@@ -174,13 +181,6 @@ class ImageService
                 $watermarkImage->save();
                 $file = new UploadedFile($watermarkImage->basePath(), $file->getClientOriginalName(), $file->getMimeType());
                 $watermarkImage->destroy();
-            }
-
-            // 图片压缩
-            if ($configs->get(GroupConfigKey::IsEnableCompress, 1)) {
-                $compressConfigs = collect($configs->get(GroupConfigKey::CompressConfigs, []));
-                $result = $this->compress($file, $compressConfigs);
-                $file = $result['file'];
             }
         }
 
