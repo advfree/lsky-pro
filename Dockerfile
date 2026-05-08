@@ -12,16 +12,17 @@ RUN apk add --no-cache \
     jpegoptim optipng supervisor \
     sqlite-dev
 
-# Install GD extension (with configure flags)
+# Install GD extension
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) gd
 
-# Install other PHP extensions
-RUN docker-php-ext-install -j$(nproc) \
-    pdo_mysql pdo_pgsql pdo_sqlite \
-    zip bcmath mbstring xml exif opcache pcntl
+# Install database extensions
+RUN docker-php-ext-install -j$(nproc) pdo_mysql pdo_pgsql pdo_sqlite
 
-# Install imagick & redis
+# Install utility extensions
+RUN docker-php-ext-install -j$(nproc) zip bcmath mbstring xml exif opcache
+
+# Install imagick & redis via PECL
 RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
     && pecl install imagick redis \
     && docker-php-ext-enable imagick redis \
@@ -31,13 +32,9 @@ RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN apk add --no-cache nodejs npm
 
-# Copy Nginx config
+# Copy config files
 COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
-
-# Copy supervisor config
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# Copy OPcache config
 COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 
 # Copy application code
