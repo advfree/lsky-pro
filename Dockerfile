@@ -25,7 +25,7 @@ RUN grep -q '^www-data:' /etc/passwd || adduser -u 82 -D -S -G www-data www-data
     && sed -i 's/user  nginx;/user  www-data;/' /etc/nginx/nginx.conf \
     && ln -s /var/www/html/storage/app/uploads public/i
 
-FROM php:8.2-fpm-alpine
+FROM php:8.2-fpm-alpine AS app
 WORKDIR /var/www/html
 
 RUN apk add --no-cache \
@@ -57,3 +57,14 @@ ENV IMAGE_DRIVER=gd
 
 ENTRYPOINT ["lsky-entrypoint"]
 CMD ["php-fpm"]
+
+FROM app AS standalone
+
+RUN apk add --no-cache nginx
+
+COPY docker/nginx/standalone.conf /etc/nginx/conf.d/default.conf
+COPY docker/supervisor/standalone.conf /etc/supervisord.conf
+
+EXPOSE 80
+
+CMD ["supervisord", "-c", "/etc/supervisord.conf"]
