@@ -167,9 +167,17 @@ class ImageService
                 // 获取拓展名，判断是否需要转换
                 $format = $format ?: $extension;
                 $filename = Str::replaceLast($extension, $format, $file->getClientOriginalName());
-                $file = $this->convertUploadedImageForStorage($file, $filename, $format, $quality);
-                // 重新设置拓展名
-                $extension = $format;
+                try {
+                    $file = $this->convertUploadedImageForStorage($file, $filename, $format, $quality);
+                    // 重新设置拓展名
+                    $extension = $format;
+                } catch (\Throwable $e) {
+                    if (! @getimagesize($file->getRealPath())) {
+                        throw $e;
+                    }
+
+                    Utils::e($e, '图片重编码失败，已按原图继续上传', 'warning');
+                }
             }
 
             // 是否启用水印，覆盖原图片
