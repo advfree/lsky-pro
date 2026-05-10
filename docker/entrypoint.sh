@@ -1,12 +1,49 @@
 #!/usr/bin/env sh
 set -e
 
-mkdir -p storage/app/uploads storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache public/uploads public/thumbnails
+export DB_CONNECTION="${DB_CONNECTION:-mysql}"
+export DB_HOST="${DB_HOST:-${MYSQL_HOST:-mysql}}"
+export DB_PORT="${DB_PORT:-${MYSQL_PORT:-3306}}"
+export DB_DATABASE="${DB_DATABASE:-${MYSQL_DATABASE:-lsky-pro}}"
+export DB_USERNAME="${DB_USERNAME:-${MYSQL_USER:-lsky-pro}}"
+export DB_PASSWORD="${DB_PASSWORD:-${MYSQL_PASSWORD:-lsky-pro}}"
+export CACHE_DRIVER="${CACHE_DRIVER:-file}"
+export SESSION_DRIVER="${SESSION_DRIVER:-file}"
+export QUEUE_CONNECTION="${QUEUE_CONNECTION:-sync}"
+export IMAGE_DRIVER="${IMAGE_DRIVER:-gd}"
+
+mkdir -p storage/app/uploads storage/app/thumbnails storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache public/uploads
+
+if [ ! -f storage/app/.env ]; then
+    cp .env.example storage/app/.env 2>/dev/null || touch storage/app/.env
+fi
+
+ln -sfn storage/app/.env .env
 ln -sfn storage/installed.lock installed.lock
 ln -sfn /var/www/html/storage/app/uploads public/i
+if [ ! -e public/thumbnails ]; then
+    ln -sfn /var/www/html/storage/app/thumbnails public/thumbnails
+fi
 touch .env
-chown www-data:www-data .env
-chown -R www-data:www-data storage bootstrap/cache public/uploads public/thumbnails
+chown -h www-data:www-data .env installed.lock public/i public/thumbnails
+chown -R www-data:www-data storage bootstrap/cache public/uploads
+
+if ! grep -q '^APP_KEY=base64:' .env; then
+    php artisan key:generate --force --no-interaction
+fi
+
+if [ "$DB_CONNECTION" = "mysql" ]; then
+    echo "Waiting for MySQL at ${DB_HOST}:${DB_PORT}..."
+    i=0
+    until php -r 'try { new PDO("mysql:host=".getenv("DB_HOST").";port=".getenv("DB_PORT").";dbname=".getenv("DB_DATABASE"), getenv("DB_USERNAME"), getenv("DB_PASSWORD")); exit(0); } catch (Throwable $e) { exit(1); }'; do
+        i=$((i + 1))
+        if [ "$i" -ge 60 ]; then
+            echo "MySQL is not ready after 120 seconds."
+            exit 1
+        fi
+        sleep 2
+    done
+fi
 
 php artisan storage:link >/dev/null 2>&1 || true
 php artisan migrate --force

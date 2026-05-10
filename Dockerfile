@@ -51,6 +51,7 @@ COPY --from=vendor --chown=www-data:www-data /app/vendor vendor
 COPY --from=assets --chown=www-data:www-data /app/public public
 
 RUN chmod +x /usr/local/bin/lsky-entrypoint \
+    && rm -rf public/thumbnails \
     && chown -R www-data:www-data storage bootstrap/cache public
 
 ENV IMAGE_DRIVER=gd
