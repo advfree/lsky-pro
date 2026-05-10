@@ -63,7 +63,7 @@ FROM app AS standalone
 
 RUN apk add --no-cache nginx
 
-COPY docker/nginx/standalone.conf /etc/nginx/conf.d/default.conf
+COPY docker/nginx/standalone.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisor/standalone.conf /etc/supervisord.conf
 
 EXPOSE 80

@@ -53,10 +53,10 @@ services:
     ports:
       - 7791:80
     environment:
-      - MYSQL_HOST=mysql
-      - MYSQL_DATABASE=lsky-pro
-      - MYSQL_USER=lsky-pro
-      - MYSQL_PASSWORD=lsky-pro
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: lsky-pro
+      MYSQL_USER: lsky-pro
+      MYSQL_PASSWORD: your_mysql_password # 改成强密码，并与下面 MYSQL_PASSWORD 保持一致
     depends_on:
       - mysql
 
@@ -65,10 +65,10 @@ services:
     container_name: lsky-pro-db
     restart: always
     environment:
-      - MYSQL_DATABASE=lsky-pro
-      - MYSQL_USER=lsky-pro
-      - MYSQL_PASSWORD=lsky-pro
-      - MYSQL_ROOT_PASSWORD=lsky-pro
+      MYSQL_DATABASE: lsky-pro
+      MYSQL_USER: lsky-pro
+      MYSQL_PASSWORD: your_mysql_password # 改成强密码，并与上面 MYSQL_PASSWORD 保持一致
+      MYSQL_ROOT_PASSWORD: your_mysql_root_password # 改成另一个强密码
     volumes:
       - /root/data/docker_data/lsky-pro/db:/var/lib/mysql
 ```
@@ -95,7 +95,7 @@ http://你的服务器IP:7791
 数据库连接端口：3306
 数据库名称：lsky-pro
 数据库用户名：lsky-pro
-数据库密码：lsky-pro
+数据库密码：填写 docker-compose.yml 里的 MYSQL_PASSWORD
 ```
 
 然后设置超级管理员邮箱和密码。
@@ -130,36 +130,48 @@ Compose 示例只持久化两个目录：
 
 默认 Compose 不写 NAS 路径，先让程序简单跑起来。
 
-如果你习惯把 NAS/NFS 挂载到 Ubuntu 的：
+NAS 在宿主机上的路径每个人都不一样，可以用占位写法表示：
+
+```text
+your_NAS_folder
+```
+
+比如它可能是：
 
 ```text
 /home/user/lskypro
+/mnt/nfs/lskypro
+/mnt/nas/lskypro
 ```
 
-那么有两种做法。
+为了让后台填写路径更统一，推荐把宿主机 NAS 路径映射到容器内固定路径：
 
-### 做法 A：Docker 仍用默认目录，后台改存储总路径
+```text
+/var/www/html/nas
+```
+
+### 做法 A：Docker 仍用默认数据目录，额外挂载 NAS
 
 把 NAS 挂载到宿主机后，在 compose 中额外加一行挂载：
 
 ```yaml
     volumes:
       - /root/data/docker_data/lsky-pro/lsky-pro-data:/var/www/html/storage
-      - /home/user/lskypro:/home/user/lskypro
+      - your_NAS_folder:/var/www/html/nas
 ```
 
 然后进入 Lsky Pro 后台，在储存策略或 NAS 存储与备份中填写：
 
 ```text
-存储总路径：/home/user/lskypro
+存储总路径：/var/www/html/nas
 ```
 
 系统会自动使用：
 
 ```text
-图片目录：/home/user/lskypro/uploads
-MySQL 备份目录：/home/user/lskypro/backups/mysql
-NAS 图片导入目录：/home/user/lskypro/imports
+图片目录：/var/www/html/nas/uploads
+MySQL 备份目录：/var/www/html/nas/backups/mysql
+NAS 图片导入目录：/var/www/html/nas/imports
 ```
 
 ### 做法 B：直接把默认 storage 放到 NAS
@@ -167,7 +179,7 @@ NAS 图片导入目录：/home/user/lskypro/imports
 如果你想让 Lsky Pro 的默认持久化目录就在 NAS 上，可以把第一条 volume 改成：
 
 ```yaml
-      - /home/user/lskypro/lsky-pro-data:/var/www/html/storage
+      - your_NAS_folder/lsky-pro-data:/var/www/html/storage
 ```
 
 MySQL 数据目录仍然建议放 VPS 本地 SSD，不建议放 NAS/NFS。

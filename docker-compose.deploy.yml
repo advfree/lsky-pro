@@ -6,10 +6,10 @@ services:
     ports:
       - "7791:80"
     environment:
-      - MYSQL_HOST=mysql
-      - MYSQL_DATABASE=lsky-pro
-      - MYSQL_USER=lsky-pro
-      - MYSQL_PASSWORD=lsky-pro
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: lsky-pro
+      MYSQL_USER: lsky-pro
+      MYSQL_PASSWORD: your_mysql_password # 改成强密码，并与下面 MYSQL_PASSWORD 保持一致
     volumes:
       - /root/data/docker_data/lsky-pro/lsky-pro-data:/var/www/html/storage
     depends_on:
@@ -20,9 +20,9 @@ services:
     container_name: lsky-pro-db
     restart: always
     environment:
-      - MYSQL_DATABASE=lsky-pro
-      - MYSQL_USER=lsky-pro
-      - MYSQL_PASSWORD=lsky-pro
-      - MYSQL_ROOT_PASSWORD=lsky-pro
+      MYSQL_DATABASE: lsky-pro
+      MYSQL_USER: lsky-pro
+      MYSQL_PASSWORD: your_mysql_password # 改成强密码，并与上面 MYSQL_PASSWORD 保持一致
+      MYSQL_ROOT_PASSWORD: your_mysql_root_password # 改成另一个强密码
     volumes:
       - /root/data/docker_data/lsky-pro/db:/var/lib/mysql
