@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StrategyRequest;
+use App\Enums\StrategyKey;
 use App\Models\Strategy;
+use App\Services\StorageBasePathService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -43,6 +45,9 @@ class StrategyController extends Controller
         $strategy = new Strategy($validated);
         DB::transaction(function () use ($strategy, $validated) {
             $strategy->save();
+            if ($strategy->key === StrategyKey::Local && $basePath = $validated['storage_base_path'] ?? '') {
+                (new StorageBasePathService())->apply($basePath, $strategy);
+            }
             $strategy->groups()->attach($validated['groups'] ?? []);
         });
         return $this->success('创建成功');
@@ -56,6 +61,9 @@ class StrategyController extends Controller
         $strategy->fill($request->validated());
         DB::transaction(function () use ($strategy, $validated) {
             $strategy->save();
+            if ($strategy->key === StrategyKey::Local && $basePath = $validated['storage_base_path'] ?? '') {
+                (new StorageBasePathService())->apply($basePath, $strategy);
+            }
             $strategy->groups()->sync($validated['groups'] ?? []);
         });
         return $this->success('保存成功');

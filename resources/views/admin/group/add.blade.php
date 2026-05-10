@@ -11,21 +11,21 @@
         <div class="mt-5 md:mt-0 md:col-span-2">
             <ul id="tabs" class="flex space-x-2 text-sm">
                 <li class="group">
-                    <a data-target="basic" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-white dark:bg-gray-800 group-hover:bg-white dark:group-hover:bg-gray-700">常规配置</a>
+                    <a data-target="basic" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-white group-hover:bg-white">常规配置</a>
                 </li>
                 <li class="group">
-                    <a data-target="review" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 dark:bg-gray-700 group-hover:bg-white dark:group-hover:bg-gray-700">图片审核</a>
+                    <a data-target="review" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 group-hover:bg-white">图片审核</a>
                 </li>
                 <li class="group">
-                    <a data-target="protection" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 dark:bg-gray-700 group-hover:bg-white dark:group-hover:bg-gray-700">原图保护</a>
+                    <a data-target="protection" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 group-hover:bg-white">原图保护</a>
                 </li>
                 <li class="group">
-                    <a data-target="watermark" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 dark:bg-gray-700 group-hover:bg-white dark:group-hover:bg-gray-700">水印配置</a>
+                    <a data-target="watermark" href="javascript:void(0)" class="block rounded-t-lg px-3 py-2 bg-gray-200 group-hover:bg-white">水印配置</a>
                 </li>
             </ul>
             <form action="{{ route('admin.group.create') }}" method="POST">
                 <div class="overflow-hidden rounded-md rounded-l-none shadow-custom">
-                    <div class="px-4 py-5 bg-white dark:bg-gray-800 sm:p-6">
+                    <div class="px-4 py-5 bg-white sm:p-6">
                         <div data-tab="basic" class="grid grid-cols-6 gap-6">
                             <div class="col-span-6">
                                 <label for="name" class="block text-sm font-medium text-gray-700"><span class="text-red-600">*</span>组名称</label>
@@ -82,6 +82,7 @@
                             <div class="col-span-6 sm:col-span-3">
                                 <label for="image_save_quality" class="block text-sm font-medium text-gray-700">图片保存质量</label>
                                 <x-input type="number" name="configs[image_save_quality]" id="image_save_quality" autocomplete="path_naming_rule" placeholder="请输入图片保存质量" value="{{ $default->get('image_save_quality', 100) }}" />
+                                <p class="mt-1 text-xs text-gray-500">范围 1-100，数字越大质量越好、文件越大。</p>
                             </div>
 
                             <div class="col-span-6 sm:col-span-3">
@@ -92,6 +93,32 @@
                                         <option value="{{ strtolower($extension) }}">{{ strtoupper($extension) }}</option>
                                     @endforeach
                                 </x-select>
+                            </div>
+
+                            <div class="col-span-6">
+                                <x-fieldset title="生成分享优化图" faq="开启后保留上传原图，另存一份压缩后的分享图；复制链接、Markdown、HTML 默认使用优化图。">
+                                    <x-switch id="configs[is_enable_optimized_share]" name="configs[is_enable_optimized_share]" value="1" :checked="(bool)$default->get('is_enable_optimized_share')"></x-switch>
+                                </x-fieldset>
+                            </div>
+
+                            <div class="col-span-6 sm:col-span-3">
+                                <label for="optimized_image_format" class="block text-sm font-medium text-gray-700">分享优化图格式</label>
+                                <x-select id="configs[optimized_image_format]" name="configs[optimized_image_format]" autocomplete="optimized_image_format">
+                                    @foreach(['webp', 'jpg', 'jpeg', 'png'] as $extension)
+                                        <option value="{{ $extension }}" @selected($default->get('optimized_image_format', 'webp') === $extension)>{{ strtoupper($extension) }}</option>
+                                    @endforeach
+                                </x-select>
+                            </div>
+
+                            <div class="col-span-6 sm:col-span-3">
+                                <label for="optimized_image_quality" class="block text-sm font-medium text-gray-700">分享优化图质量</label>
+                                <x-input type="number" name="configs[optimized_image_quality]" id="optimized_image_quality" autocomplete="optimized_image_quality" placeholder="请输入分享优化图质量" value="{{ $default->get('optimized_image_quality', 75) }}" />
+                                <p class="mt-1 text-xs text-gray-500">范围 1-100，数字越大质量越好、文件越大。</p>
+                            </div>
+
+                            <div class="col-span-6 sm:col-span-3">
+                                <label for="optimized_image_max_width" class="block text-sm font-medium text-gray-700">分享优化图最长边</label>
+                                <x-input type="number" name="configs[optimized_image_max_width]" id="optimized_image_max_width" autocomplete="optimized_image_max_width" placeholder="0 表示不缩放" value="{{ $default->get('optimized_image_max_width', 2560) }}" />
                             </div>
 
                             <div class="col-span-6">

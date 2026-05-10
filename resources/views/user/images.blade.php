@@ -79,6 +79,19 @@
     <div class="relative inset-0 h-full overflow-hidden">
         <!-- content -->
         <div id="images-scroll" class="absolute inset-0 overflow-y-scroll dragselect select-none">
+            <div id="albums-overview" class="px-4 pt-4 pb-2 space-y-3 dragselect">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-800">相册</p>
+                        <p class="text-xs text-gray-500 mt-1">先按相册进入，也可以直接处理未归位图片。</p>
+                        <p class="text-xs text-gray-500 mt-1">提示：移动相册不会影响外链。</p>
+                    </div>
+                    <a class="text-sm py-1.5 px-2.5 hover:bg-gray-100 rounded text-gray-700" href="javascript:getAlbums()">
+                        <i class="fas fa-plus text-blue-500"></i> 管理相册
+                    </a>
+                </div>
+                <div id="albums-overview-list" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3"></div>
+            </div>
             <div id="images-grid" class="dragselect"></div>
         </div>
         <!-- right drawer -->
@@ -105,7 +118,7 @@
                     <p class="text-xs date" title="__human_date__">__date__</p>
                 </div>
             </div>
-            <img alt="__name__" data-original="__url__" src="__thumb_url__" width="__width__" height="__height__" loading="lazy">
+            <img alt="__name__" data-original="__url__" src="__thumb_url__" width="__width__" height="__height__">
         </a>
     </script>
 
@@ -130,6 +143,18 @@
                 <span class="delete"><i class="fas fa-trash-alt text-xs text-red-400"></i></span>
             </div>
             <span class="group-hover:hidden text-xs">__image_num__</span>
+        </a>
+    </script>
+
+    <script type="text/html" id="album-overview-item-tpl">
+        <a href="javascript:void(0)" data-json='__json__' title="__intro__" class="album-overview-item group flex items-center gap-3 rounded-md border border-gray-200 bg-white px-3 py-3 hover:border-blue-300 hover:bg-blue-50">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-blue-50 text-blue-500 group-hover:bg-white">
+                <i class="__icon__"></i>
+            </span>
+            <span class="min-w-0">
+                <span class="block truncate text-sm font-semibold text-gray-800">__name__</span>
+                <span class="block text-xs text-gray-500">__image_num__ 张图片</span>
+            </span>
         </a>
     </script>
 
@@ -214,15 +239,18 @@
             };
 
             let selectedAlbum = {}; // 选择的相册
+            let currentFilters = {};
 
             const HEADER_TITLE = '#header-title';
             const IMAGES_SCROLL = '#images-scroll';
             const IMAGES_GRID = '#images-grid';
             const IMAGES_ITEM = '.images-item';
             const ALBUM_ITEM = '.albums-item';
+            const ALBUM_OVERVIEW_ITEM = '.album-overview-item';
 
             const $headerTitle = $(HEADER_TITLE);
             const $photos = $(IMAGES_GRID);
+            const $albumsOverview = $('#albums-overview-list');
             const $drawer = $("#drawer");
             const $drawerMask = $('#drawer-mask');
             const viewer = new Viewer(document.getElementById('images-grid'), {url: 'data-original'});
@@ -252,6 +280,79 @@
             $photos.justifiedGallery(gridConfigs);
 
             let albumsInfinite = null;
+            const buildAlbumOverviewItem = (album) => {
+                return $('#album-overview-item-tpl').html()
+                    .replace(/__json__/g, JSON.stringify(album).replace(/\$/g, '$$$$'))
+                    .replace(/__intro__/g, album.intro || album.name)
+                    .replace(/__icon__/g, album.icon)
+                    .replace(/__name__/g, album.name)
+                    .replace(/__image_num__/g, album.image_num || 0)
+            };
+
+            const refreshAlbumOverview = () => {
+                axios.get('{{ route('user.albums') }}').then(response => {
+                    if (!response.data.status) {
+                        return toastr.error(response.data.message);
+                    }
+
+                    let stats = response.data.data.stats || {};
+                    let albums = response.data.data.albums.data || [];
+                    let html = buildAlbumOverviewItem({
+                        id: undefined,
+                        type: 'all',
+                        name: '全部图片',
+                        intro: '显示所有图片',
+                        image_num: stats.image_num || 0,
+                        icon: 'fas fa-images',
+                    });
+                    html += buildAlbumOverviewItem({
+                        id: 'none',
+                        type: 'none',
+                        name: '未归位',
+                        intro: '还没有放入相册的图片',
+                        image_num: stats.unassigned_image_num || 0,
+                        icon: 'fas fa-inbox',
+                    });
+
+                    for (const i in albums) {
+                        albums[i].type = 'album';
+                        albums[i].icon = 'fas fa-folder';
+                        html += buildAlbumOverviewItem(albums[i]);
+                    }
+
+                    $albumsOverview.html(html);
+                    highlightAlbumOverview();
+                });
+            };
+
+            const highlightAlbumOverview = () => {
+                $albumsOverview.find(ALBUM_OVERVIEW_ITEM)
+                    .removeClass('border-blue-400 bg-blue-50')
+                    .addClass('border-gray-200 bg-white');
+
+                $albumsOverview.find(ALBUM_OVERVIEW_ITEM).each(function () {
+                    let album = $(this).data('json');
+                    let active = (!selectedAlbum.id && album.type === 'all') || selectedAlbum.id === album.id;
+                    if (active) {
+                        $(this).removeClass('border-gray-200 bg-white').addClass('border-blue-400 bg-blue-50');
+                    }
+                });
+            };
+
+            const selectAlbum = (album) => {
+                selectedAlbum = album || {};
+                if (selectedAlbum.type === 'none') {
+                    currentFilters.album_id = 'none';
+                } else if (selectedAlbum.id) {
+                    currentFilters.album_id = selectedAlbum.id;
+                } else {
+                    currentFilters.album_id = '';
+                    selectedAlbum = {};
+                }
+                highlightAlbumOverview();
+                resetImages({page: 1});
+            };
+
             const imagesInfinite = utils.infiniteScroll(IMAGES_SCROLL, {
                 url: '{{ route('user.images') }}',
                 classes: ['dragselect'],
@@ -296,15 +397,15 @@
                         // 没有任何数据时销毁 justifiedGallery
                         $photos.justifiedGallery('destroy')
                     }
-                    $headerTitle.text('我的图片')
+                    $headerTitle.text(selectedAlbum.name ? `我的图片 / ${selectedAlbum.name}` : '我的图片')
                 }
             });
 
             const resetImages = (params) => {
                 $photos.addClass('reset').html('').justifiedGallery('destroy');
                 ds.clearSelection();
-                params = $.extend({page: 1}, params)
-                imagesInfinite.refresh(params);
+                currentFilters = $.extend(currentFilters, params || {});
+                imagesInfinite.refresh($.extend({page: 1, album_id: ''}, currentFilters));
             }
 
             const getAlbums = (options, callback) => {
@@ -353,11 +454,10 @@
                     $albums.off('click', '>a').on('click', '>a', function () {
                         // 如果当前已经为选中状态则清除
                         if (selectedAlbum.id === $(this).data('id')) {
-                            selectedAlbum = {};
+                            selectAlbum({});
                         } else {
-                            selectedAlbum = $(this).data('json');
+                            selectAlbum($.extend({type: 'album'}, $(this).data('json')));
                         }
-                        resetImages({page: 1, album_id: selectedAlbum.id || null});
                         drawer.close();
                         ds.clearSelection();
                     });
@@ -399,6 +499,8 @@
                                 axios.delete(`/user/albums/${id}`).then(response => {
                                     if (response.data.status) {
                                         selectedAlbum = {};
+                                        currentFilters.album_id = '';
+                                        refreshAlbumOverview();
                                         resetImages();
                                         setTimeout(_ => drawer.close(), 300)
                                     } else {
@@ -418,6 +520,7 @@
                             if (response.data.status) {
                                 $form.get(0).reset();
                                 resetAlbums()
+                                refreshAlbumOverview();
                             } else {
                                 $errorMessage.html('<i class="fas fa-exclamation-circle"></i> ' + response.data.message).show();
                             }
@@ -436,6 +539,7 @@
                                     .attr('title', $form.find('textarea').val())
                                     .find('.name').text($form.find('input').val());
                                 $editContainer.remove();
+                                refreshAlbumOverview();
                             } else {
                                 $errorMessage.html('<i class="fas fa-exclamation-circle"></i> ' + response.data.message).show();
                             }
@@ -445,20 +549,29 @@
             }
 
             const setOrderBy = function (sort) {
-                resetImages({page: 1, order: sort})
+                currentFilters.order = sort;
+                resetImages({page: 1})
                 $('#order span').text({newest: '最新', earliest: '最早', utmost: '最大', least: '最小'}[sort]);
             };
 
             const setPermission = function (permission) {
-                resetImages({page: 1, permission: permission})
+                currentFilters.permission = permission;
+                resetImages({page: 1})
                 $('#permission span').text({public: '公开', private: '私有', all: '全部'}[permission]);
             };
 
             $('#search').keydown(function (e) {
                 if (e.keyCode === 13) {
-                    resetImages({page: 1, keyword: $(this).val()});
+                    currentFilters.keyword = $(this).val();
+                    resetImages({page: 1});
                 }
             });
+
+            $albumsOverview.on('click', ALBUM_OVERVIEW_ITEM, function () {
+                selectAlbum($(this).data('json'));
+            });
+
+            refreshAlbumOverview();
 
             $(document).keydown(e => {
                 if (e.keyCode === 65 && (e.altKey || e.metaKey)) {
@@ -491,7 +604,7 @@
                 if (selected.length > 1) {
                     operates = ['refresh', 'movements', 'permission', 'delete'];
                 }
-                if (selected.length && selectedAlbum.id !== undefined) {
+                if (selected.length && selectedAlbum.type === 'album') {
                     operates.push('remove');
                 }
                 $(operates.map(item => `[data-operate=${item}]`).toString()).css('display', 'block');
@@ -523,15 +636,45 @@
                 compress: false
             });
 
-            new ClipboardJS('.dropdown-menu li a.copy', {
-                text: function(trigger) {
-                    return $(trigger).data('copy-value');
+            const fallbackCopyText = text => {
+                const $textarea = $('<textarea readonly></textarea>').val(text).css({
+                    position: 'fixed',
+                    top: '-9999px',
+                    left: '-9999px',
+                });
+
+                $('body').append($textarea);
+                $textarea[0].select();
+                $textarea[0].setSelectionRange(0, text.length);
+
+                try {
+                    if (document.execCommand('copy')) {
+                        toastr.success('复制成功');
+                    } else {
+                        toastr.warning('复制失败');
+                    }
+                } catch (e) {
+                    toastr.warning('复制失败');
+                } finally {
+                    $textarea.remove();
                 }
-            }).on('success', _ => {
-                toastr.success('复制成功');
-            }).on('error', _ => {
-                toastr.warning('复制失败')
-            });
+            };
+
+            const copyText = text => {
+                if (!text) {
+                    toastr.warning('没有可复制的内容');
+                    return;
+                }
+
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text)
+                        .then(() => toastr.success('复制成功'))
+                        .catch(() => fallbackCopyText(text));
+                    return;
+                }
+
+                fallbackCopyText(text);
+            };
 
             const methods = {
                 movements() {
@@ -546,6 +689,7 @@
                             }).then(response => {
                                 if (response.data.status) {
                                     drawer.close();
+                                    refreshAlbumOverview();
                                     resetImages();
                                     toastr.success(response.data.message);
                                 } else {
@@ -560,11 +704,12 @@
                     $headerTitle.text(`移出 ${selected.length} 张图片`)
                     axios.put('{{ route('user.images.movement') }}', {
                         selected: selected,
-                        album_id: selectedAlbum.id || null, // 原相册ID
+                        album_id: selectedAlbum.type === 'album' ? selectedAlbum.id : null, // 原相册ID
                         id: null,
                     }).then(response => {
                         if (response.data.status) {
                             drawer.close();
+                            refreshAlbumOverview();
                             resetImages();
                             toastr.success(response.data.message);
                         } else {
@@ -772,7 +917,7 @@
                 remove: {
                     text: '移出当前相册',
                     action: _ => methods.remove(),
-                    visible: _ => selectedAlbum.id !== undefined,
+                    visible: _ => selectedAlbum.type === 'album',
                 },
                 detail: {
                     text: '详细信息',
@@ -816,9 +961,11 @@
                 },
                 afterOpen: function (item, dropdown) {
                     let data = $(item).data('json');
-                    // 追加链接
-                    $(dropdown).find('a.copy').each(function () {
-                        $(this).data('copy-value', data.links[$(this).data('link-type')])
+                    // 复制菜单是动态生成的，点击时直接读取当前图片链接，避免 Markdown 文本被 data 属性截断。
+                    $(dropdown).find('a.copy').off('click.copyLink').on('click.copyLink', function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        copyText(data.links[$(this).data('link-type')]);
                     });
                 }
             });
@@ -827,14 +974,16 @@
                 let operate = $(this).data('operate');
                 let selected = ds.getSelection();
 
+                if (operate === 'refresh') {
+                    resetImages();
+                    return false;
+                }
+
                 if (selected.length === 0) {
                     return false;
                 }
 
                 switch (operate) {
-                    case 'refresh': // 刷新
-                        resetImages();
-                        break;
                     case 'movements': // 移动到相册
                         methods.movements();
                         break;

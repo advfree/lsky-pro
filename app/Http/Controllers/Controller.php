@@ -11,7 +11,6 @@ use App\Models\Group;
 use App\Models\Image;
 use App\Models\Strategy;
 use App\Models\User;
-use App\Security\XssSanitizer;
 use App\Services\ImageService;
 use App\Utils;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -42,6 +41,9 @@ class Controller extends BaseController
             abort(404);
         }
 
+        $imageDriver = strtolower(config('image.driver', 'imagick'));
+        $imageExtension = $imageDriver === 'gd' ? 'gd' : 'imagick';
+
         $extensions = collect([
             ['name' => 'BCMath', 'intro' => '数学精度处理拓展'],
             ['name' => 'Ctype', 'intro' => '字符类型检测拓展'],
@@ -54,9 +56,14 @@ class Controller extends BaseController
             ['name' => 'PDO', 'intro' => '数据库拓展'],
             ['name' => 'Tokenizer', 'intro' => '令牌处理拓展'],
             ['name' => 'XML', 'intro' => 'Xml 解析器'],
-            ['name' => 'Imagick', 'intro' => '高性能图片处理拓展'],
+            [
+                'name' => strtoupper($imageExtension),
+                'intro' => '当前图片处理拓展',
+                'extension' => $imageExtension,
+            ],
         ])->transform(function ($item) {
-            $item['result'] = extension_loaded(strtolower($item['name']));
+            $item['result'] = extension_loaded($item['extension'] ?? strtolower($item['name']));
+            unset($item['extension']);
             return $item;
         })->push([
             'name' => 'readlink、symlink 函数',
@@ -148,28 +155,36 @@ class Controller extends BaseController
         $image = Image::query()
             ->with('group')
             ->where('key', $request->route('key'))
-            ->where('extension', strtolower($request->route('extension')))
             ->firstOr(fn() => abort(404));
-        if (! $image->group?->configs->get(GroupConfigKey::IsEnableOriginalProtection)) {
+        $extension = strtolower($request->route('extension'));
+        $optimizedExtension = $image->optimized_pathname ? strtolower(pathinfo($image->optimized_pathname, PATHINFO_EXTENSION)) : null;
+        $isOptimizedOutput = (bool) $request->route('optimized') && $optimizedExtension && $extension === $optimizedExtension;
+        if ($extension !== $image->extension && ! $isOptimizedOutput) {
+            abort(404);
+        }
+        if (! $isOptimizedOutput && ! $image->group?->configs->get(GroupConfigKey::IsEnableOriginalProtection)) {
             abort(404);
         }
         try {
-            $cacheKey = "image_{$image->key}";
+            $cacheKey = "image_{$image->key}_{$extension}";
+            $pathname = $isOptimizedOutput ? $image->optimized_pathname : $image->pathname;
+            $outputExtension = $isOptimizedOutput ? $optimizedExtension : $image->extension;
 
             if (Cache::has($cacheKey)) {
                 $contents = Cache::get($cacheKey);
             } else {
-                $contents = $image->filesystem()->read($image->pathname);
+                $contents = $image->filesystem()->read($pathname);
                 $configs = collect($image->group?->configs->get(GroupConfigKey::WatermarkConfigs));
 
                 // 是否启用了水印功能，跳过gif和ico图片
                 if (
+                    ! $isOptimizedOutput &&
                     $image->group?->configs->get(GroupConfigKey::IsEnableWatermark) &&
                     $configs->get('mode', Mode::Overlay) == Mode::Dynamic &&
-                    ! in_array($image->extension, ['ico', 'gif', 'svg'])
+                    ! in_array($outputExtension, ['ico', 'gif', 'svg'])
                 ) {
                     $quality = $image->group?->configs->get(GroupConfigKey::ImageSaveQuality, 75);
-                    $contents = $service->stickWatermark($contents, $configs)->encode($image->extension, $quality)->getEncoded();
+                    $contents = $service->stickWatermark($contents, $configs)->encode($outputExtension, $quality)->getEncoded();
                 }
                 $cacheTtl = (int)$image->group?->configs->get(GroupConfigKey::ImageCacheTtl, 0);
                 // 是否启用了缓存
@@ -184,15 +199,15 @@ class Controller extends BaseController
             abort(404);
         }
 
-        $mimetype = $image->mimetype;
+        $mimetype = $isOptimizedOutput ? ($image->optimized_mimetype ?: 'image/'.$outputExtension) : $image->mimetype;
 
         // ico svg 图片直接输出，不经过 InterventionImage 处理
-        if (in_array($image->extension, ['ico', 'svg'])) {
+        if (in_array($outputExtension, ['ico', 'svg'])) {
             goto out;
         }
 
         // 浏览器无法预览的图片，改为 png 格式输出
-        if (in_array($image->extension, ['psd', 'tif', 'bmp'])) {
+        if (in_array($outputExtension, ['psd', 'tif', 'bmp'])) {
             $mimetype = 'image/png';
             $contents = InterventionImage::make($contents)->encode('png')->getEncoded();
         }

@@ -20,6 +20,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\User\ImageController;
 use App\Http\Controllers\User\AlbumController;
+use App\Http\Controllers\User\NasImageImportController;
 use App\Http\Controllers\Common\GalleryController;
 use App\Http\Controllers\Common\ApiController;
 
@@ -45,6 +46,8 @@ Route::group(['middleware' => ['auth']], function () {
         Route::get('', [UserController::class, 'settings'])->name('settings');
         Route::put('', [UserController::class, 'update'])->name('settings.update');
         Route::put('set-strategy', [UserController::class, 'setStrategy'])->name('settings.strategy.set');
+        Route::post('tokens', [UserController::class, 'createApiToken'])->name('settings.tokens.create');
+        Route::delete('tokens', [UserController::class, 'clearApiTokens'])->name('settings.tokens.clear');
     });
 
     Route::group([
@@ -55,6 +58,8 @@ Route::group(['middleware' => ['auth']], function () {
     });
 
     Route::get('upload', fn () => view('user.upload'))->name('upload');
+    Route::get('nas-image-import', [NasImageImportController::class, 'index'])->middleware('auth.admin')->name('nas-image-import');
+    Route::post('nas-image-import', [NasImageImportController::class, 'import'])->middleware('auth.admin')->name('nas-image-import.import');
     Route::get('images', [ImageController::class, 'index'])->name('images');
     Route::group(['prefix' => 'user'], function () {
         Route::get('images', [ImageController::class, 'images'])->name('user.images');
@@ -108,6 +113,10 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth.admin']], function () 
     Route::group(['prefix' => 'settings'], function () {
         Route::get('', [AdminSettingController::class, 'index'])->name('admin.settings');
         Route::put('save', [AdminSettingController::class, 'save'])->name('admin.settings.save');
+        Route::post('storage-base-path/apply', [AdminSettingController::class, 'applyStorageBasePath'])->name('admin.settings.storage-base-path.apply');
+        Route::post('mysql-backup', [AdminSettingController::class, 'mysqlBackup'])->name('admin.settings.mysql.backup');
+        Route::post('mysql-backup/upload', [AdminSettingController::class, 'mysqlBackupUpload'])->name('admin.settings.mysql.backup.upload');
+        Route::get('mysql-backup/{filename}', [AdminSettingController::class, 'mysqlBackupDownload'])->name('admin.settings.mysql.backup.download');
         Route::post('mail-test', [AdminSettingController::class, 'mailTest'])->name('admin.settings.mail.test');
         Route::get('check-update', [AdminSettingController::class, 'checkUpdate'])->name('admin.settings.check.update');
         Route::post('upgrade', [AdminSettingController::class, 'upgrade'])->name('admin.settings.upgrade');

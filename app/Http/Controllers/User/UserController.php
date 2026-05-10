@@ -6,6 +6,7 @@ use App\Enums\UserConfigKey;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UserSettingRequest;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -27,7 +28,13 @@ class UserController extends Controller
 
     public function settings(): View
     {
-        return view('user.settings');
+        /** @var User $user */
+        $user = Auth::user();
+        $apiTokens = $user->tokens()
+            ->latest('id')
+            ->get(['id', 'name', 'last_used_at', 'created_at', 'expires_at']);
+
+        return view('user.settings', compact('apiTokens'));
     }
 
     public function update(UserSettingRequest $request): Response
@@ -60,5 +67,75 @@ class UserController extends Controller
         }
         $user->update(['configs->'.UserConfigKey::DefaultStrategy => $strategy->id]);
         return $this->success('设置成功');
+    }
+
+    public function createApiToken(Request $request): Response
+    {
+        try {
+            /** @var User $user */
+            $user = Auth::user();
+            $tokenName = trim((string) $request->input('name', 'Third-party client'));
+            $tokenName = $tokenName !== '' ? $tokenName : 'Third-party client';
+            $expiresAt = $this->resolveTokenExpiry($request);
+
+            $newToken = $user->createToken($tokenName);
+            $newToken->accessToken->forceFill([
+                'expires_at' => $expiresAt,
+            ])->save();
+            $plainTextToken = $newToken->plainTextToken;
+
+            return $this->success('API Token 生成成功', [
+                'token' => $plainTextToken,
+                'name' => $tokenName,
+                'api_url' => url('/api/v1'),
+                'expires_at' => $expiresAt?->format('Y-m-d H:i:s'),
+            ]);
+        } catch (\Throwable $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    public function clearApiTokens(): Response
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        $user->tokens()->delete();
+
+        return $this->success('API Token 已清空');
+    }
+
+    private function resolveTokenExpiry(Request $request): ?Carbon
+    {
+        $expiresType = (string) $request->input('expires_type', 'never');
+
+        $expiresAt = match ($expiresType) {
+            '1_month' => now()->addMonth(),
+            '6_months' => now()->addMonths(6),
+            '1_year' => now()->addYear(),
+            '3_years' => now()->addYears(3),
+            '5_years' => now()->addYears(5),
+            'custom_date' => $this->parseCustomExpiryDate((string) $request->input('expires_at_date', '')),
+            'never' => null,
+            default => throw new \RuntimeException('请选择正确的 Token 有效期'),
+        };
+
+        if ($expiresAt && $expiresAt->isPast()) {
+            throw new \RuntimeException('Token 有效期必须晚于当前时间');
+        }
+
+        return $expiresAt;
+    }
+
+    private function parseCustomExpiryDate(string $date): Carbon
+    {
+        if ($date === '') {
+            throw new \RuntimeException('请选择具体到期日期');
+        }
+
+        try {
+            return Carbon::parse($date)->endOfDay();
+        } catch (\Throwable) {
+            throw new \RuntimeException('具体到期日期格式不正确');
+        }
     }
 }

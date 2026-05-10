@@ -45,4 +45,19 @@ final class ConfigKey
 
     /** @var string 角色组默认配置 */
     const Group = 'group';
+
+    /** @var string 迁移友好存储总路径 */
+    const StorageBasePath = 'storage_base_path';
+
+    /** @var string 是否启用 MySQL 自动备份 */
+    const IsEnableMysqlBackup = 'is_enable_mysql_backup';
+
+    /** @var string MySQL 自动备份间隔天数 */
+    const MysqlBackupIntervalDays = 'mysql_backup_interval_days';
+
+    /** @var string MySQL 备份保留份数 */
+    const MysqlBackupRetentionCount = 'mysql_backup_retention_count';
+
+    /** @var string MySQL 最近备份时间 */
+    const MysqlBackupLastRanAt = 'mysql_backup_last_ran_at';
 }

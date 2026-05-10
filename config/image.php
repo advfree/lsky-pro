@@ -15,5 +15,5 @@ return [
     |
     */
 
-    'driver' => 'imagick'
+    'driver' => env('IMAGE_DRIVER', 'imagick')
 ];

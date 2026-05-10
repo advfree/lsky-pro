@@ -2,6 +2,154 @@
 
 <x-app-layout>
     <div class="my-6 md:my-9">
+        <p class="text-xl mb-2 text-gray-800 font-semibold">API Token</p>
+        <div class="space-y-4 bg-white p-3 rounded-md mb-10 shadow-custom">
+            <div class="rounded bg-blue-50 p-3 text-sm text-blue-800 space-y-1">
+                <p>这里生成的是给第三方客户端使用的 API Token，比如 Halo 的 Lsky Pro 插件。</p>
+                <p>Token 只会在创建成功时显示一次。已有 Token 的明文无法再次查看，丢失后请重新生成。</p>
+                <p>接口地址：<span class="font-mono">{{ url('/api/v1') }}</span></p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                <div>
+                    <label for="api_token_name" class="block text-sm font-medium text-gray-700">Token 名称</label>
+                    <x-input type="text" id="api_token_name" value="Halo" placeholder="例如：Halo、PicGo、Obsidian" />
+                </div>
+                <div>
+                    <label for="api_token_expiry" class="block text-sm font-medium text-gray-700">有效期</label>
+                    <x-select id="api_token_expiry" class="mt-1">
+                        <option value="1_month">1个月</option>
+                        <option value="6_months">半年</option>
+                        <option value="1_year">1年</option>
+                        <option value="3_years">3年</option>
+                        <option value="5_years">5年</option>
+                        <option value="never" selected>无限</option>
+                        <option value="custom_date">具体日期</option>
+                    </x-select>
+                </div>
+                <div id="api-token-custom-date-wrap" class="hidden">
+                    <label for="api_token_expiry_date" class="block text-sm font-medium text-gray-700">具体日期</label>
+                    <x-input type="date" id="api_token_expiry_date" />
+                </div>
+            </div>
+
+            <div class="text-right">
+                <x-button type="button" id="create-api-token" class="w-full sm:w-auto">生成 API Token</x-button>
+            </div>
+
+            <div id="api-token-result" class="hidden rounded bg-green-50 p-3 text-sm text-green-700 space-y-2">
+                <p id="api-token-message"></p>
+                <p class="text-sm text-green-700">备注：该 Token 只会展示一次，之后只能重新申请。</p>
+                <x-code id="api-token-value" class="my-0"></x-code>
+                <div class="flex flex-wrap gap-2">
+                    <x-button type="button" id="copy-api-token" class="bg-blue-500">复制 Token</x-button>
+                    <x-button type="button" id="close-api-token-result" class="bg-gray-500">关闭</x-button>
+                </div>
+            </div>
+
+            <div class="rounded border border-gray-100 overflow-hidden">
+                <table class="min-w-full text-sm text-left">
+                    <thead class="bg-gray-50 text-gray-600">
+                    <tr>
+                        <th class="px-3 py-2 font-medium">名称</th>
+                        <th class="px-3 py-2 font-medium">有效期</th>
+                        <th class="px-3 py-2 font-medium">创建时间</th>
+                        <th class="px-3 py-2 font-medium">最近使用</th>
+                        <th class="px-3 py-2 font-medium">备注用户</th>
+                    </tr>
+                    </thead>
+                    <tbody id="api-token-table-body" class="divide-y divide-gray-100">
+                    @forelse($apiTokens as $token)
+                        <tr>
+                            <td class="px-3 py-2">{{ $token->name }}</td>
+                            <td class="px-3 py-2 whitespace-nowrap">{{ $token->expires_at ? $token->expires_at->format('Y-m-d H:i:s') : '无限' }}</td>
+                            <td class="px-3 py-2 whitespace-nowrap">{{ optional($token->created_at)->format('Y-m-d H:i:s') }}</td>
+                            <td class="px-3 py-2 whitespace-nowrap">{{ optional($token->last_used_at)->format('Y-m-d H:i:s') ?: '未使用' }}</td>
+                            <td class="px-3 py-2 whitespace-nowrap">{{ $user->name }} / {{ $currentUserNote }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-3 py-4 text-gray-500 text-center">还没有 API Token</td>
+                        </tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="text-right">
+                <x-button type="button" id="clear-api-tokens" class="bg-red-500">清空全部 API Token</x-button>
+            </div>
+        </div>
+
+        <p class="text-xl mb-2 text-gray-800 font-semibold">相册 ID</p>
+        <div class="space-y-4 bg-white p-3 rounded-md mb-10 shadow-custom">
+            <div class="rounded bg-gray-50 p-3 text-sm text-gray-700 space-y-1">
+                <p>这里列出你当前账号下可见的相册 ID。新增、修改或删除相册后，这个表会在你下次打开接口页时自动按最新数据显示。</p>
+                <p>移动图片到不同相册不会影响图片外链。</p>
+                <p>当前查看用户：{{ $user->name }} / {{ $currentUserNote }}</p>
+            </div>
+            <div class="rounded border border-gray-100 overflow-hidden">
+                <table class="min-w-full text-sm text-left">
+                    <thead class="bg-gray-50 text-gray-600">
+                    <tr>
+                        <th class="px-3 py-2 font-medium">相册 ID</th>
+                        <th class="px-3 py-2 font-medium">名称</th>
+                        <th class="px-3 py-2 font-medium">图片数</th>
+                        <th class="px-3 py-2 font-medium">简介</th>
+                    </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                    @forelse($albums as $album)
+                        <tr>
+                            <td class="px-3 py-2 whitespace-nowrap font-mono">{{ $album->id }}</td>
+                            <td class="px-3 py-2">{{ $album->name }}</td>
+                            <td class="px-3 py-2 whitespace-nowrap">{{ $album->image_num }}</td>
+                            <td class="px-3 py-2 text-gray-500">{{ $album->intro ?: '-' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="px-3 py-4 text-gray-500 text-center">还没有相册</td>
+                        </tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <p class="text-xl mb-2 text-gray-800 font-semibold">存储策略 ID</p>
+        <div class="space-y-4 bg-white p-3 rounded-md mb-10 shadow-custom">
+            <div class="rounded bg-gray-50 p-3 text-sm text-gray-700 space-y-1">
+                <p>这里列出你当前角色组可用的存储策略 ID。新增、修改或调整角色组绑定关系后，这个表会在你下次打开接口页时自动按最新数据显示。</p>
+                <p>当前查看用户：{{ $user->name }} / {{ $currentUserNote }}</p>
+            </div>
+            <div class="rounded border border-gray-100 overflow-hidden">
+                <table class="min-w-full text-sm text-left">
+                    <thead class="bg-gray-50 text-gray-600">
+                    <tr>
+                        <th class="px-3 py-2 font-medium">策略 ID</th>
+                        <th class="px-3 py-2 font-medium">名称</th>
+                        <th class="px-3 py-2 font-medium">类型</th>
+                        <th class="px-3 py-2 font-medium">简介</th>
+                    </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                    @forelse($strategies as $strategy)
+                        <tr>
+                            <td class="px-3 py-2 whitespace-nowrap font-mono">{{ $strategy->id }}</td>
+                            <td class="px-3 py-2">{{ $strategy->name }}</td>
+                            <td class="px-3 py-2 whitespace-nowrap">{{ \App\Models\Strategy::DRIVERS[$strategy->key] ?? $strategy->key }}</td>
+                            <td class="px-3 py-2 text-gray-500">{{ $strategy->intro ?: '-' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="px-3 py-4 text-gray-500 text-center">当前角色组还没有可用存储策略</td>
+                        </tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <p class="text-xl mb-2 text-gray-800 font-semibold">接口说明</p>
         <div class="space-y-4 bg-white p-3 rounded-md mb-10 shadow-custom">
             <div>
@@ -1012,4 +1160,98 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+        <script>
+            let toggleApiTokenCustomDate = function () {
+                $('#api-token-custom-date-wrap')[$('#api_token_expiry').val() === 'custom_date' ? 'removeClass' : 'addClass']('hidden');
+            };
+
+            toggleApiTokenCustomDate();
+
+            $('#api_token_expiry').change(function () {
+                toggleApiTokenCustomDate();
+            });
+
+            $('#create-api-token').click(function () {
+                let $button = $(this);
+                let $result = $('#api-token-result');
+                let name = $('#api_token_name').val();
+                let expiresType = $('#api_token_expiry').val();
+                let expiresAtDate = $('#api_token_expiry_date').val();
+
+                $button.attr('disabled', true);
+                axios.post('{{ route('settings.tokens.create') }}', {
+                    name: name,
+                    expires_type: expiresType,
+                    expires_at_date: expiresAtDate,
+                }).then(response => {
+                    if (! response.data.status) {
+                        toastr.error(response.data.message);
+                        return;
+                    }
+
+                    let token = response.data.data.token;
+                    let expiresAt = response.data.data.expires_at || '无限';
+                    $('#api-token-message').text(`Token 名称：${response.data.data.name}，有效期：${expiresAt}`);
+                    $('#api-token-value').text(token);
+                    $result.show();
+                    $('#api-token-table-body').find('td[colspan="5"]').closest('tr').remove();
+                    $('#api-token-table-body').prepend(`
+                        <tr>
+                            <td class="px-3 py-2">${response.data.data.name}</td>
+                            <td class="px-3 py-2 whitespace-nowrap">${expiresAt}</td>
+                            <td class="px-3 py-2 whitespace-nowrap">${new Date().toLocaleString('sv-SE').replace('T', ' ')}</td>
+                            <td class="px-3 py-2 whitespace-nowrap">未使用</td>
+                            <td class="px-3 py-2 whitespace-nowrap">{{ $user->name }} / {{ $currentUserNote }}</td>
+                        </tr>
+                    `);
+                    toastr.success(response.data.message);
+                }).catch(error => {
+                    toastr.error(error.message || '生成 Token 失败');
+                }).finally(() => {
+                    $button.attr('disabled', false);
+                });
+            });
+
+            $('#copy-api-token').click(function () {
+                let token = $('#api-token-value').text().trim();
+                navigator.clipboard.writeText(token).then(() => {
+                    toastr.success('Token 已复制');
+                }).catch(() => {
+                    toastr.error('复制失败，请手动复制');
+                });
+            });
+
+            $('#close-api-token-result').click(function () {
+                $('#api-token-result').hide();
+            });
+
+            $('#clear-api-tokens').click(function () {
+                Swal.fire({
+                    title: '确认清空全部 API Token？',
+                    text: '清空后，所有第三方客户端都会立即失效，需要重新生成并重新配置。',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '确认清空',
+                    cancelButtonText: '取消',
+                }).then(result => {
+                    if (! result.isConfirmed) {
+                        return;
+                    }
+
+                    axios.delete('{{ route('settings.tokens.clear') }}').then(response => {
+                        if (response.data.status) {
+                            toastr.success(response.data.message);
+                            window.location.reload();
+                        } else {
+                            toastr.error(response.data.message);
+                        }
+                    }).catch(error => {
+                        toastr.error(error.message || '清空失败');
+                    });
+                });
+            });
+        </script>
+    @endpush
 </x-app-layout>

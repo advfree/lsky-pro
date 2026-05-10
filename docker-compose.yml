@@ -1,91 +1,102 @@
-version: '3.8'
-
 services:
   app:
+    image: lsky-pro-master-app
+    build: .
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_KEY: ${APP_KEY:?Set APP_KEY in your .env before starting}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-lsky}
+      DB_USERNAME: ${DB_USERNAME:-lsky}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your .env before starting}
+      CACHE_DRIVER: file
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+      IMAGE_DRIVER: gd
+    volumes:
+      - storage:/var/www/html/storage
+      - uploads:/var/www/html/public/uploads
+      - thumbnails:/var/www/html/public/thumbnails
+      - ${LSKY_STORAGE_BASE_PATH:-./docker-data/lskypro}:${LSKY_STORAGE_BASE_PATH:-/mnt/nas/lskypro}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  nginx:
     build:
       context: .
-      dockerfile: docker/php/Dockerfile
-    container_name: lsky-app
-    restart: unless-stopped
-    working_dir: /var/www/html
-    volumes:
-      - lsky-storage:/var/www/html/storage
-      - lsky-public:/var/www/html/public
-    environment:
-      - APP_ENV=production
-      - APP_DEBUG=false
-      - APP_URL=${APP_URL:-http://localhost:8080}
-      - APP_KEY=${APP_KEY:-}
-      - DB_CONNECTION=mysql
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_DATABASE=lsky
-      - DB_USERNAME=lsky
-      - DB_PASSWORD=${DB_PASSWORD:-lsky_secret_pass}
-      - CACHE_DRIVER=redis
-      - SESSION_DRIVER=redis
-      - REDIS_HOST=redis
-      - REDIS_PASSWORD=null
-      - REDIS_PORT=6379
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    networks:
-      - lsky-network
-
-  web:
-    image: nginx:1.25-alpine
-    container_name: lsky-web
+      target: web
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-8080}:80"
+      - "${HTTP_PORT:-8080}:80"
     volumes:
-      - ./docker/nginx/compose.conf:/etc/nginx/conf.d/default.conf:ro
-      - lsky-public:/var/www/html/public:ro
+      - uploads:/var/www/html/public/uploads:ro
+      - thumbnails:/var/www/html/public/thumbnails:ro
+      - storage:/var/www/html/storage:ro
+      - ${LSKY_STORAGE_BASE_PATH:-./docker-data/lskypro}:${LSKY_STORAGE_BASE_PATH:-/mnt/nas/lskypro}:ro
     depends_on:
       - app
-    networks:
-      - lsky-network
 
-  db:
-    image: mysql:8.0
-    container_name: lsky-db
+  scheduler:
+    image: lsky-pro-master-app
+    build: .
+    restart: unless-stopped
+    command: php artisan schedule:work
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_KEY: ${APP_KEY:?Set APP_KEY in your .env before starting}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-lsky}
+      DB_USERNAME: ${DB_USERNAME:-lsky}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your .env before starting}
+      CACHE_DRIVER: file
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+      IMAGE_DRIVER: gd
+    volumes:
+      - storage:/var/www/html/storage
+      - uploads:/var/www/html/public/uploads
+      - thumbnails:/var/www/html/public/thumbnails
+      - ${LSKY_STORAGE_BASE_PATH:-./docker-data/lskypro}:${LSKY_STORAGE_BASE_PATH:-/mnt/nas/lskypro}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.4
     restart: unless-stopped
     environment:
-      - MYSQL_DATABASE=lsky
-      - MYSQL_USER=lsky
-      - MYSQL_PASSWORD=${DB_PASSWORD:-lsky_secret_pass}
-      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-root_secret_pass}
+      MYSQL_DATABASE: ${DB_DATABASE:-lsky}
+      MYSQL_USER: ${DB_USERNAME:-lsky}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your .env before starting}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in your .env before starting}
     volumes:
-      - lsky-db:/var/lib/mysql
+      - mysql:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
       retries: 10
-    networks:
-      - lsky-network
 
   redis:
     image: redis:7-alpine
-    container_name: lsky-redis
     restart: unless-stopped
+    command: redis-server --appendonly yes
     volumes:
-      - lsky-redis:/data
-    networks:
-      - lsky-network
-
-networks:
-  lsky-network:
-    driver: bridge
+      - redis:/data
 
 volumes:
-  lsky-storage:
-    driver: local
-  lsky-public:
-    driver: local
-  lsky-db:
-    driver: local
-  lsky-redis:
-    driver: local
+  mysql:
+  redis:
+  storage:
+  uploads:
+  thumbnails:

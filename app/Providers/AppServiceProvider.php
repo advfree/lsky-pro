@@ -4,12 +4,14 @@ namespace App\Providers;
 
 use App\Enums\ConfigKey;
 use App\Models\Group;
+use App\Models\PersonalAccessToken;
 use App\Utils;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,6 +32,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
+        Sanctum::authenticateAccessTokensUsing(function ($accessToken, bool $isValid) {
+            if (! $isValid) {
+                return false;
+            }
+
+            return is_null($accessToken->expires_at) || $accessToken->expires_at->isFuture();
+        });
+
         // 是否需要生成 env 文件
         if (! file_exists(base_path('.env'))) {
             file_put_contents(base_path('.env'), file_get_contents(base_path('.env.example')));

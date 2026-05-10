@@ -11,6 +11,10 @@
 .env.backup
 .phpunit.result.cache
 docker-compose.override.yml
+docker-data
+codex-*.jpg
+codex-*.png
+codex-ui-backup-*/
 Homestead.json
 Homestead.yaml
 npm-debug.log

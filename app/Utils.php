@@ -57,6 +57,7 @@ class Utils
                     case ConfigKey::IsEnableApi:
                     case ConfigKey::IsEnableRegistration:
                     case ConfigKey::IsUserNeedVerify:
+                    case ConfigKey::IsEnableMysqlBackup:
                         $value = (bool) $value;
                         break;
                     case ConfigKey::Mail:
@@ -65,6 +66,10 @@ class Utils
                         break;
                     case ConfigKey::UserInitialCapacity:
                         $value = sprintf('%.2f', $value);
+                        break;
+                    case ConfigKey::MysqlBackupIntervalDays:
+                    case ConfigKey::MysqlBackupRetentionCount:
+                        $value = (int) $value;
                         break;
                     default:
                 }

@@ -76,7 +76,11 @@ class Strategy extends Model
                     (new Filesystem())->link($target, $symlink);
                 }
                 // 是否需要移除旧的符号链接
-                $url = $strategy->getOriginal('configs')['url'] ?? '';
+                $originalConfigs = $strategy->getOriginal('configs') ?: [];
+                if (is_string($originalConfigs)) {
+                    $originalConfigs = json_decode($originalConfigs, true) ?: [];
+                }
+                $url = $originalConfigs['url'] ?? '';
                 if ($url) {
                     $oldSymlink = self::getRootPath($url);
                     if ($oldSymlink != $symlink) {

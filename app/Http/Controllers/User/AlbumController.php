@@ -21,7 +21,13 @@ class AlbumController extends Controller
         $albums->getCollection()->each(function (Album $album) {
             $album->setVisible(['id', 'name', 'intro', 'image_num']);
         });
-        return $this->success('success', compact('albums'));
+
+        $stats = [
+            'image_num' => $user->images()->count(),
+            'unassigned_image_num' => $user->images()->whereNull('album_id')->count(),
+        ];
+
+        return $this->success('success', compact('albums', 'stats'));
     }
 
     public function create(AlbumRequest $request): Response

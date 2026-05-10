@@ -27,7 +27,16 @@ class InstallSeeder extends Seeder
             ];
         })->values()->toArray();
         DB::transaction(function () use ($array) {
-            DB::table('configs')->insert($array);
+            foreach ($array as $item) {
+                DB::table('configs')->updateOrInsert(
+                    ['name' => $item['name']],
+                    [
+                        'value' => $item['value'],
+                        'updated_at' => $item['updated_at'],
+                        'created_at' => $item['created_at'],
+                    ]
+                );
+            }
             // 创建默认组和默认策略
             /** @var Group $group */
             $group = Group::query()->create([

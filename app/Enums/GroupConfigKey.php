@@ -61,9 +61,11 @@ final class GroupConfigKey
     /** @var string 图片保存质量 */
     const ImageSaveQuality = 'image_save_quality';
 
-    /** @var string 是否启用压缩 */
-    const IsEnableCompress = 'is_enable_compress';
+    const IsEnableOptimizedShare = 'is_enable_optimized_share';
 
-    /** @var string 压缩配置 */
-    const CompressConfigs = 'compress_configs';
+    const OptimizedImageFormat = 'optimized_image_format';
+
+    const OptimizedImageQuality = 'optimized_image_quality';
+
+    const OptimizedImageMaxWidth = 'optimized_image_max_width';
 }

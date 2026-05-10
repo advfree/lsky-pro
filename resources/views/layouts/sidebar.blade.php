@@ -1,8 +1,8 @@
-<nav class="transition-all duration-300 -left-[600px] sm:left-0 w-3/4 sm:w-64 h-screen bg-white dark:bg-gray-900 fixed z-10 shadow-custom" :class="{
+<nav class="transition-all duration-300 -left-[600px] sm:left-0 w-3/4 sm:w-64 h-screen bg-white fixed z-10 shadow-custom" :class="{
     '-left-[600px]': ! $store.sidebar.open,
     'left-0': $store.sidebar.open
 }">
-    <div class="px-6 h-14 flex justify-between sm:justify-center items-center bg-gray-600 dark:bg-gray-800 text-white text-xl">
+    <div class="px-6 h-14 flex justify-between sm:justify-center items-center bg-gray-600 text-white text-xl">
         <a href="/" class="truncate">{{ \App\Utils::config(\App\Enums\ConfigKey::AppName) }}</a>
         <a href="javascript:void(0)" class="sm:hidden block" @click="$store.sidebar.open = false"><i class="fas fa-times"></i></a>
     </div>
@@ -21,6 +21,12 @@
                     <x-slot name="icon"><i class="fas fa-cloud-upload-alt text-blue-500"></i></x-slot>
                     <x-slot name="name">上传图片</x-slot>
                 </x-nav-link>
+                @if(Auth::user()->is_adminer)
+                <x-nav-link :href="route('nas-image-import')" :active="request()->routeIs('nas-image-import')">
+                    <x-slot name="icon"><i class="fas fa-folder-plus text-blue-500"></i></x-slot>
+                    <x-slot name="name">NAS 图片导入</x-slot>
+                </x-nav-link>
+                @endif
                 <x-nav-link :href="route('images')" :active="request()->routeIs('images')">
                     <x-slot name="icon"><i class="fas fa-images text-blue-500"></i></x-slot>
                     <x-slot name="name">我的图片</x-slot>
@@ -79,9 +85,9 @@
         </div>
 
         <div id="capacity-progress" class="flex flex-col space-y-2 mb-5 px-5 w-full mt-10">
-            <p class="text-gray-700 dark:text-gray-300 text-sm">容量使用</p>
+            <p class="text-gray-700 text-sm">容量使用</p>
             <progress class="w-full h-1.5" value="{{ Auth::user()->use_capacity }}" max="{{ Auth::user()->capacity }}"></progress>
-            <p class="text-gray-700 dark:text-gray-300 text-sm truncate">
+            <p class="text-gray-700 text-sm truncate">
                 <span class="used">{{ \App\Utils::formatSize(Auth::user()->use_capacity * 1024) }}</span>
                 /
                 <span class="total">{{ \App\Utils::formatSize(Auth::user()->capacity * 1024) }}</span>

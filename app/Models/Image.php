@@ -31,13 +31,18 @@ use League\Flysystem\Filesystem;
  * @property string $alias_name
  * @property string $filename
  * @property float $size
+ * @property string|null $optimized_pathname
+ * @property float|null $optimized_size
  * @property string $mimetype
+ * @property string|null $optimized_mimetype
  * @property string $extension
  * @property string $md5
  * @property string $sha1
  * @property integer $width
  * @property integer $height
  * @property string $url
+ * @property string $original_url
+ * @property string|null $optimized_url
  * @property string $thumb_url
  * @property Collection $links
  * @property int $permission
@@ -58,10 +63,13 @@ class Image extends Model
         'key',
         'path',
         'name',
+        'optimized_pathname',
         'origin_name',
         'alias_name',
         'size',
+        'optimized_size',
         'mimetype',
+        'optimized_mimetype',
         'extension',
         'md5',
         'sha1',
@@ -70,10 +78,6 @@ class Image extends Model
         'permission',
         'is_unhealthy',
         'uploaded_ip',
-        'compress_before_size',
-        'compress_after_size',
-        'compress_ratio',
-        'compress_mode',
     ];
 
     protected $hidden = [
@@ -92,11 +96,9 @@ class Image extends Model
         'width' => 'integer',
         'height' => 'integer',
         'size' => 'float',
+        'optimized_size' => 'float',
         'is_unhealthy' => 'bool',
         'permission' => 'integer',
-        'compress_before_size' => 'float',
-        'compress_after_size' => 'float',
-        'compress_ratio' => 'float',
     ];
 
     protected ?Filesystem $filesystem = null;
@@ -121,9 +123,16 @@ class Image extends Model
                 try {
                     // 删除物理文件
                     $image->filesystem()->delete($image->pathname);
+                    if ($image->optimized_pathname) {
+                        $image->filesystem()->delete($image->optimized_pathname);
+                    }
                     @unlink(public_path($image->getThumbnailPathname()));
                     // 删除缓存
                     Cache::forget("image_{$image->key}");
+                    Cache::forget("image_{$image->key}_{$image->extension}");
+                    if ($image->optimized_pathname) {
+                        Cache::forget("image_{$image->key}_".pathinfo($image->optimized_pathname, PATHINFO_EXTENSION));
+                    }
                 } catch (\Throwable $e) {
                     Utils::e($e, '删除物理文件时发生异常');
                 }
@@ -158,10 +167,14 @@ class Image extends Model
             }
         })->when($request->query('keyword'), function (Builder $builder, $keyword) {
             $builder->where('origin_name', 'like', "%{$keyword}%")->orWhere('alias_name', 'like', "%{$keyword}%");
-        })->when((int) $request->query('album_id'), function (Builder $builder, $albumId) {
-            $builder->where('album_id', $albumId);
-        }, function (Builder $builder) {
-            $builder->whereNull('album_id');
+        })->when($request->has('album_id'), function (Builder $builder) use ($request) {
+            $albumId = $request->query('album_id');
+
+            if ($albumId === 'none') {
+                $builder->whereNull('album_id');
+            } elseif ((int) $albumId > 0) {
+                $builder->where('album_id', (int) $albumId);
+            }
         });
     }
 
@@ -179,15 +192,24 @@ class Image extends Model
     public function url(): Attribute
     {
         return new Attribute(function () {
-            // 是否启用原图保护功能
-            if ($this->group?->configs->get(GroupConfigKey::IsEnableOriginalProtection)) {
-                $url = asset("{$this->key}.{$this->extension}");
-            } else {
-                $url = rtrim($this->strategy?->configs->get('url'), '/').'/'.ltrim($this->pathname, '/');
+            return $this->optimized_url ?: $this->original_url;
+        });
+    }
+
+    public function originalUrl(): Attribute
+    {
+        return new Attribute(fn() => $this->buildImageUrl($this->pathname, $this->extension));
+    }
+
+    public function optimizedUrl(): Attribute
+    {
+        return new Attribute(function () {
+            if (! $this->optimized_pathname) {
+                return null;
             }
 
-            // 拼接图片 url
-            return $url.($this->strategy?->configs->get('queries') ?: '');
+            $extension = strtolower(pathinfo($this->optimized_pathname, PATHINFO_EXTENSION));
+            return asset("i/{$this->key}.{$extension}").($this->strategy?->configs->get('queries') ?: '');
         });
     }
 
@@ -209,6 +231,8 @@ class Image extends Model
     {
         return new Attribute(fn() => collect([
             'url' => $this->url,
+            'original_url' => $this->original_url,
+            'optimized_url' => $this->optimized_url,
             'html' => "&lt;img src=\"{$this->url}\" alt=\"{$this->origin_name}\" title=\"{$this->origin_name}\" /&gt;",
             'bbcode' => "[img]{$this->url}[/img]",
             'markdown' => "![{$this->origin_name}]({$this->url})",
@@ -248,6 +272,17 @@ class Image extends Model
     public function getThumbnailPathname(): string
     {
         return trim(config('app.thumbnail_path'), '/')."/{$this->md5}.". ($this->extension === 'svg' ? 'svg' : "png");
+    }
+
+    protected function buildImageUrl(string $pathname, string $extension): string
+    {
+        if ($this->group?->configs->get(GroupConfigKey::IsEnableOriginalProtection)) {
+            $url = asset("{$this->key}.{$extension}");
+        } else {
+            $url = rtrim($this->strategy?->configs->get('url'), '/').'/'.ltrim($pathname, '/');
+        }
+
+        return $url.($this->strategy?->configs->get('queries') ?: '');
     }
 
     private function generateKey($length = 6): string

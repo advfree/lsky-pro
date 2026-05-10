@@ -11,7 +11,7 @@
             <div class="grid-sizer"></div>
             @foreach($images as $image)
                 <div class="grid-item">
-                    <div class="relative bg-white dark:bg-gray-800 rounded-md overflow-hidden">
+                    <div class="relative bg-white rounded-md overflow-hidden">
                         @if($image->extension === 'gif')
                             <span class="absolute top-1 right-1 z-[1] bg-white rounded-md text-sm px-1 py-0">Gif</span>
                         @endif

@@ -24,7 +24,7 @@ Route::group([
     'middleware' => CheckIsEnableApi::class,
 ], function () {
     Route::get('strategies', [StrategyController::class, 'index']);
-    Route::post('upload', [ImageController::class, 'upload'])->middleware('upload.security');
+    Route::post('upload', [ImageController::class, 'upload']);
     Route::post('tokens', [TokenController::class, 'store'])->middleware('throttle:3,1');
 
     Route::group([

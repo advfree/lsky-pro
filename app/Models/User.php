@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ConfigKey;
+use App\Enums\UserConfigKey;
 use App\Utils;
 use Illuminate\Support\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -100,6 +101,19 @@ class User extends Authenticatable implements MustVerifyEmail
             // 初始容量
             $user->capacity = Utils::config(ConfigKey::UserInitialCapacity);
             $user->configs = collect(config('convention.user'))->merge($user->configs ?: []);
+
+            if (! $user->configs->get(UserConfigKey::DefaultStrategy)) {
+                $defaultStrategyId = Group::query()
+                    ->where('id', $user->group_id)
+                    ->first()
+                    ?->strategies()
+                    ->orderBy('strategies.id')
+                    ->value('strategies.id');
+
+                if ($defaultStrategyId) {
+                    $user->configs = $user->configs->put(UserConfigKey::DefaultStrategy, $defaultStrategyId);
+                }
+            }
         });
     }
 

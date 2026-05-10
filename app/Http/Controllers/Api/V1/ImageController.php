@@ -61,7 +61,7 @@ class ImageController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        $images = $user->images()->with(['album', 'strategy'])->filter($request)->paginate(40)->withQueryString();
+        $images = $user->images()->filter($request)->paginate(40)->withQueryString();
         $images->getCollection()->each(function (Image $image) {
             $image->human_date = $image->created_at->diffForHumans();
             $image->date = $image->created_at->format('Y-m-d H:i:s');

@@ -1,40 +1,59 @@
+FROM php:8.2-cli-alpine AS vendor
+WORKDIR /app
+RUN apk add --no-cache git unzip libzip-dev openssl-dev \
+    && docker-php-ext-install ftp zip
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --no-scripts
+COPY . .
+RUN composer dump-autoload --optimize --no-dev
+
+FROM node:18-alpine AS assets
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY resources resources
+COPY webpack.mix.js tailwind.config.js ./
+RUN npm run prod
+
+FROM nginx:1.27-alpine AS web
+WORKDIR /var/www/html
+COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY public public
+COPY --from=assets /app/public public
+RUN grep -q '^www-data:' /etc/passwd || adduser -u 82 -D -S -G www-data www-data \
+    && sed -i 's/user  nginx;/user  www-data;/' /etc/nginx/nginx.conf \
+    && ln -s /var/www/html/storage/app/uploads public/i
+
 FROM php:8.2-fpm-alpine
-
-LABEL description="Lsky Pro - Enhanced image hosting"
-
-# System deps
-RUN apk add --no-cache bash curl git \
-    libpng-dev libjpeg-turbo-dev freetype-dev libwebp-dev \
-    libzip-dev oniguruma-dev libxml2-dev \
-    sqlite-dev postgresql-dev imagemagick-dev imagemagick
-
-# PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install -j$(nproc) gd pdo_mysql pdo_pgsql pdo_sqlite \
-    zip bcmath mbstring xml exif opcache ftp
-
-# PECL extensions
-RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
-    && pecl install imagick redis \
-    && docker-php-ext-enable imagick redis \
-    && apk del .build-deps
-
-# Composer & Node
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-RUN apk add --no-cache nodejs npm
-
-# PHP config
-COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
-
-# App
-COPY . /var/www/html
 WORKDIR /var/www/html
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-req=ext-ftp \
-    && npm install && npm run production \
-    && chmod -R 775 storage bootstrap/cache \
-    && php artisan storage:link
+RUN apk add --no-cache \
+        bash \
+        freetype-dev \
+        icu-dev \
+        libjpeg-turbo-dev \
+        libpng-dev \
+        libwebp-dev \
+        libwebp-tools \
+        libzip-dev \
+        mariadb-client \
+        oniguruma-dev \
+        supervisor \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j"$(nproc)" bcmath exif ftp gd intl mbstring opcache pdo_mysql zip
 
-EXPOSE 80
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/lsky.ini
+COPY docker/entrypoint.sh /usr/local/bin/lsky-entrypoint
+COPY --chown=www-data:www-data . .
+COPY --from=vendor --chown=www-data:www-data /app/vendor vendor
+COPY --from=assets --chown=www-data:www-data /app/public public
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=80"]
+RUN chmod +x /usr/local/bin/lsky-entrypoint \
+    && chown -R www-data:www-data storage bootstrap/cache public
+
+ENV IMAGE_DRIVER=gd
+
+ENTRYPOINT ["lsky-entrypoint"]
+CMD ["php-fpm"]

@@ -37,14 +37,16 @@
                                     toastr.error(response.data.message);
                                 }
                             });
+                            defaultStrategy = id;
                         }
                     @endif
                 }
             });
             if (! isSelected) {
                 let $first = $('#strategies a:first-child');
-                localStorage.setItem('strategy', $first.data('id'))
-                $('#strategy-selected').text($first.text()).data('id', $first.data('id'));
+                if ($first.length) {
+                    setStrategy($first.data('id'));
+                }
             }
         };
 

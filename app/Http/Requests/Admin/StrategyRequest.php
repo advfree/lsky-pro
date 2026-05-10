@@ -5,10 +5,29 @@ namespace App\Http\Requests\Admin;
 use App\Enums\StrategyKey;
 use App\Http\Requests\FormRequest;
 use App\Models\Strategy;
+use App\Services\StorageBasePathService;
 use Illuminate\Support\Collection;
 
 class StrategyRequest extends FormRequest
 {
+    protected function prepareForValidation()
+    {
+        if ((int) $this->input('key') !== StrategyKey::Local || ! $this->input('storage_base_path')) {
+            return;
+        }
+
+        $service = new StorageBasePathService();
+        $basePath = $service->normalizeBasePath($this->input('storage_base_path'));
+        $configs = $this->input('configs', []);
+        $configs['root'] = $service->uploadsPath($basePath);
+        $configs['url'] = rtrim(config('app.url'), '/').'/i';
+
+        $this->merge([
+            'storage_base_path' => $basePath,
+            'configs' => $configs,
+        ]);
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -59,8 +78,23 @@ class StrategyRequest extends FormRequest
 
         return array_merge($array, match((int)$this->input('key')) {
             StrategyKey::Local => [
+                'storage_base_path' => ['nullable', 'max:1000', function ($attribute, $value, $fail) {
+                    if (! $value) {
+                        return;
+                    }
+
+                    try {
+                        (new StorageBasePathService())->ensureDirectories($value);
+                    } catch (\Throwable $e) {
+                        return $fail($e->getMessage());
+                    }
+                }],
                 'configs.url' => ['required', 'url', $checkUrl],
                 'configs.root' => ['max:1000', function ($attribute, $value, $fail) {
+                    if ($this->input('storage_base_path')) {
+                        return;
+                    }
+
                     if ($value) {
                         if (! is_dir($value)) {
                             return $fail('储存路径不存在');
@@ -150,6 +184,7 @@ class StrategyRequest extends FormRequest
 
         return array_merge($array, match((int)$this->input('key')) {
             StrategyKey::Local => [
+                'storage_base_path' => '存储总路径',
                 'configs.root' => '根目录路径',
             ],
             StrategyKey::S3 => [

@@ -42,6 +42,10 @@
                         </div>
 
                         @if($strategy->key === \App\Enums\StrategyKey::Local)
+                        @php
+                            $localRoot = str_replace('\\', '/', (string) $strategy->configs->get('root'));
+                            $storageBasePath = \Illuminate\Support\Str::endsWith($localRoot, '/uploads') ? substr($localRoot, 0, -8) : \App\Utils::config(\App\Enums\ConfigKey::StorageBasePath, '');
+                        @endphp
                         <div class="col-span-6 mb-4" data-driver="{{ \App\Enums\StrategyKey::Local }}">
                             <div class="col-span-3 sm:col-span-2 mb-4">
                                 <label for="configs[url]" class="block text-sm font-medium text-gray-700"><span class="text-red-600">*</span>访问网址</label>
@@ -54,11 +58,21 @@
                                 <label for="configs[queries]" class="block text-sm font-medium text-gray-700">URL Queries</label>
                                 <x-input type="text" name="configs[queries]" id="configs[queries]" placeholder="请输入 url 额外参数" value="{{ $strategy->configs->get('queries') }}" />
                             </div>
+                            <div class="col-span-3 sm:col-span-2 mb-4">
+                                <label for="storage_base_path" class="block text-sm font-medium text-gray-700">存储总路径</label>
+                                <x-input type="text" name="storage_base_path" id="storage_base_path" placeholder="例如：/mnt/nas/lskypro" value="{{ $storageBasePath }}" />
+                                <small class="text-gray-500"><i class="fas fa-exclamation-circle"></i> 填写后系统会自动使用 uploads 保存图片，并使用 backups/mysql 保存 MySQL 备份；下方访问网址、储存路径、MySQL 备份目录会自动同步。修改此项会影响后续上传和图片访问，请确认迁移路径已经挂载可写。</small>
+                            </div>
                             <div class="col-span-6">
                                 <div class="col-span-6 sm:col-span-3 mb-4">
                                     <label for="configs[root]" class="block text-sm font-medium text-gray-700">储存路径</label>
-                                    <x-input type="text" name="configs[root]" id="configs[root]" autocomplete="text" placeholder="图片保存位置，默认：{{ config('filesystems.disks.uploads.root') }}" value="{{ $strategy->configs->get('root') }}" />
-                                    <small class="text-orange-500"><i class="fas fa-exclamation"></i> 储存路径为绝对路径，设置错误或没有读写权限可能会导致图片保存失败。如果储存路径与其他策略相同，那么请注意使用角色组的路径命名规则、文件命名规则来区分不同文件夹，否则可能会因为名称重复而导致图片物理文件被覆盖。</small>
+                                    <x-input type="text" name="configs[root]" id="configs[root]" autocomplete="text" readonly placeholder="由存储总路径自动生成" value="{{ $strategy->configs->get('root') }}" />
+                                    <small class="text-gray-500"><i class="fas fa-exclamation-circle"></i> 储存路径由存储总路径自动派生，固定为「存储总路径/uploads」，避免图片目录和 MySQL 备份目录不一致。</small>
+                                </div>
+                                <div class="col-span-6 sm:col-span-3 mb-4">
+                                    <label for="mysql_backup_path_preview" class="block text-sm font-medium text-gray-700">MySQL 备份目录</label>
+                                    <x-input type="text" id="mysql_backup_path_preview" value="{{ $storageBasePath ? rtrim($storageBasePath, '/').'/backups/mysql' : '' }}" disabled placeholder="填写存储总路径后自动显示" />
+                                    <small class="text-gray-500"><i class="fas fa-exclamation-circle"></i> 这里保存的是 MySQL 元数据备份，不是图片文件。图片文件保存到上方储存路径。</small>
                                 </div>
                             </div>
                         </div>
@@ -388,15 +402,54 @@
 
     @push('scripts')
         <script>
+            let applyStorageBasePath = function () {
+                let $local = $('[data-driver="{{ \App\Enums\StrategyKey::Local }}"]');
+                let basePath = ($local.find('[name="storage_base_path"]').val() || '').replace(/\\/g, '/').replace(/\/+$/g, '');
+
+                if (! basePath) {
+                    return;
+                }
+
+                $local.find('[name="configs[root]"]').val(basePath + '/uploads');
+                $local.find('[name="configs[url]"]').val('{{ rtrim(config('app.url'), '/') }}/i');
+                $local.find('#mysql_backup_path_preview').val(basePath + '/backups/mysql');
+            };
+
+            $('[name="storage_base_path"]').on('input change', applyStorageBasePath);
+
             $('form').submit(function (e) {
                 e.preventDefault();
-                axios.put(this.action, $(this).serialize()).then(response => {
-                    if (response.data.status) {
-                        toastr.success(response.data.message);
-                    } else {
-                        toastr.error(response.data.message);
-                    }
-                });
+                let originalBasePath = '{{ $storageBasePath }}'.replace(/\\/g, '/').replace(/\/+$/g, '');
+                let currentBasePath = ($('[data-driver="{{ \App\Enums\StrategyKey::Local }}"]').find('[name="storage_base_path"]').val() || '').replace(/\\/g, '/').replace(/\/+$/g, '');
+                applyStorageBasePath();
+                let form = this;
+                let submitForm = function () {
+                    axios.put(form.action, $(form).serialize()).then(response => {
+                        if (response.data.status) {
+                            toastr.success(response.data.message);
+                        } else {
+                            toastr.error(response.data.message);
+                        }
+                    });
+                };
+
+                if (currentBasePath && currentBasePath !== originalBasePath) {
+                    Swal.fire({
+                        title: '确认修改存储总路径？',
+                        text: '这会修改本地储存策略的图片目录、访问地址和 MySQL 备份目录。迁移期间请确认旧站已停止写入，新路径已经挂载且可写。',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: '确认修改',
+                        cancelButtonText: '取消',
+                    }).then(result => {
+                        if (result.isConfirmed) {
+                            submitForm();
+                        }
+                    });
+                    return;
+                }
+
+                submitForm();
             });
         </script>
     @endpush

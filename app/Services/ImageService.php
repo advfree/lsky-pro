@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use AlibabaCloud\Client\AlibabaCloud;
+use AlibabaCloud\Green\Green;
 use App\Enums\ConfigKey;
 use App\Enums\GroupConfigKey;
 use App\Enums\ImagePermission;
@@ -64,6 +66,7 @@ use TencentCloud\Ims\V20201229\Models\ImageModerationRequest;
 use WispX\Flysystem\Upyun\UpyunAdapter;
 use Zing\Flysystem\Oss\OssAdapter;
 use OSS\OssClient;
+use Symfony\Component\Process\Process;
 
 class ImageService
 {
@@ -88,6 +91,12 @@ class ImageService
         $group = ! is_null($user) ? $user->group : Group::query()->where('is_guest', true)->first();
         // 组配置
         $configs = $group->configs;
+        if ($request->boolean('force_optimized_share')) {
+            $configs[GroupConfigKey::IsEnableOptimizedShare] = 1;
+            $configs[GroupConfigKey::OptimizedImageFormat] = $configs->get(GroupConfigKey::OptimizedImageFormat) ?: 'webp';
+            $configs[GroupConfigKey::OptimizedImageQuality] = $configs->get(GroupConfigKey::OptimizedImageQuality) ?: 75;
+            $configs[GroupConfigKey::OptimizedImageMaxWidth] = $configs->get(GroupConfigKey::OptimizedImageMaxWidth) ?: 2560;
+        }
         // 储存策略
         $strategies = $group->strategies()->get();
         if ($strategies->isEmpty()) {
@@ -150,26 +159,17 @@ class ImageService
         $this->rateLimiter($configs, $request);
 
         // 图片处理，跳过 ico gif svg
-        if (! in_array($extension, ['ico', 'gif', 'svg'])) {
-            // 是否启用自动压缩（替代原有的质量/格式处理）
-            if ($configs->get(GroupConfigKey::IsEnableCompress, 1)) {
-                $compressConfigs = collect($configs->get(GroupConfigKey::CompressConfigs, []));
-                $result = $this->compress($file, $compressConfigs);
-                $file = $result['file'];
-                // 压缩可能改变了格式，更新扩展名
-                $extension = strtolower($file->getClientOriginalExtension());
-            } else {
-                // 原有图片保存质量与格式（未启用压缩时回退）
-                $quality = $configs->get(GroupConfigKey::ImageSaveQuality, 75);
-                $format = $configs->get(GroupConfigKey::ImageSaveFormat);
-                if ($quality < 100 || $format) {
-                    $format = $format ?: $extension;
-                    $filename = Str::replaceLast($extension, $format, $file->getClientOriginalName());
-                    $handleImage = InterventionImage::make($file)->save('tmp_' . md5_file($file->getRealPath()), $quality);
-                    $file = new UploadedFile($handleImage->basePath(), $filename, $handleImage->mime());
-                    $extension = $format;
-                    $handleImage->destroy();
-                }
+        if (! $configs->get(GroupConfigKey::IsEnableOptimizedShare) && ! in_array($extension, ['ico', 'gif', 'svg'])) {
+            // 图片保存质量与格式
+            $quality = $configs->get(GroupConfigKey::ImageSaveQuality, 75);
+            $format = $configs->get(GroupConfigKey::ImageSaveFormat);
+            if ($quality < 100 || $format) {
+                // 获取拓展名，判断是否需要转换
+                $format = $format ?: $extension;
+                $filename = Str::replaceLast($extension, $format, $file->getClientOriginalName());
+                $file = $this->convertUploadedImageForStorage($file, $filename, $format, $quality);
+                // 重新设置拓展名
+                $extension = $format;
             }
 
             // 是否启用水印，覆盖原图片
@@ -184,22 +184,21 @@ class ImageService
             }
         }
 
-        // 检查之前的压缩结果
-        if (isset($result) && $result['before_size'] != $result['after_size']) {
-            $image->compress_before_size = $result['before_size'] / 1024;
-            $image->compress_after_size = $result['after_size'] / 1024;
-            $image->compress_ratio = $result['before_size'] > 0
-                ? round((1 - $result['after_size'] / $result['before_size']) * 100, 2)
-                : 0;
-            $image->compress_mode = $result['mode'];
-        }
-
         $filename = $this->replacePathname(
             $configs->get(GroupConfigKey::PathNamingRule).'/'.$configs->get(GroupConfigKey::FileNamingRule), $file,
         );
         $pathname = $filename.".{$extension}";
 
         [$width, $height] = @getimagesize($file->getRealPath()) ?: [400, 400];
+
+        $optimizedFile = null;
+        $optimizedPathname = null;
+        if ($configs->get(GroupConfigKey::IsEnableOptimizedShare) && ! in_array($extension, ['ico', 'gif', 'svg'])) {
+            $optimizedFile = $this->makeOptimizedShareImage($file, $filename, $configs);
+            if ($optimizedFile) {
+                $optimizedPathname = $filename.'.optimized.'.strtolower($optimizedFile->getClientOriginalExtension());
+            }
+        }
 
         $image->fill([
             'md5' => md5_file($file->getRealPath()),
@@ -208,7 +207,10 @@ class ImageService
             'name' => basename($pathname),
             'origin_name' => $file->getClientOriginalName(),
             'size' => $file->getSize() / 1024,
+            'optimized_pathname' => $optimizedPathname,
+            'optimized_size' => $optimizedFile ? $optimizedFile->getSize() / 1024 : null,
             'mimetype' => $file->getMimeType(),
+            'optimized_mimetype' => $optimizedFile?->getMimeType(),
             'extension' => strtolower($extension),
             'width' => $width,
             'height' => $height,
@@ -227,13 +229,32 @@ class ImageService
             $handle = fopen($file, 'r');
             try {
                 $filesystem->writeStream($pathname, $handle);
+                if ($optimizedFile && $optimizedPathname) {
+                    $optimizedHandle = fopen($optimizedFile, 'r');
+                    $filesystem->writeStream($optimizedPathname, $optimizedHandle);
+                    if (is_resource($optimizedHandle)) @fclose($optimizedHandle);
+                }
             } catch (FilesystemException $e) {
                 Utils::e($e, '保存图片时出现异常');
                 throw new UploadException(config('app.debug', false) ? $e->getMessage() : '图片上传失败');
             }
             if (is_resource($handle)) @fclose($handle);
         } else {
-            $image->fill($existing->only('path', 'name'));
+            if ($optimizedFile && $optimizedPathname && ! $existing->optimized_pathname) {
+                try {
+                    $optimizedHandle = fopen($optimizedFile, 'r');
+                    $filesystem->writeStream($optimizedPathname, $optimizedHandle);
+                    if (is_resource($optimizedHandle)) @fclose($optimizedHandle);
+                    $existing->forceFill([
+                        'optimized_pathname' => $optimizedPathname,
+                        'optimized_mimetype' => $optimizedFile->getMimeType(),
+                        'optimized_size' => $optimizedFile->getSize() / 1024,
+                    ])->save();
+                } catch (FilesystemException $e) {
+                    Utils::e($e, '保存分享优化图时出现异常');
+                }
+            }
+            $image->fill($existing->only('path', 'name', 'optimized_pathname', 'optimized_mimetype', 'optimized_size'));
         }
 
         // 增加当前用户的图片数量和相册图片数量
@@ -252,6 +273,7 @@ class ImageService
             // 图片记录保存失败，删除物理文件
             if (! $image->save()) {
                 if (is_null($existing)) $filesystem->delete($image->pathname);
+                if (is_null($existing) && $image->optimized_pathname) $filesystem->delete($image->optimized_pathname);
                 throw new \Exception('图片记录保存失败');
             }
             $updateNum('increment');
@@ -281,10 +303,13 @@ class ImageService
             }
         }
 
-        $this->makeThumbnail($image, $file);
+        $this->makeThumbnail($image, $optimizedFile ?: $file);
 
         // 上传完成后删除临时文件
         unlink($file->getPathname());
+        if ($optimizedFile) {
+            @unlink($optimizedFile->getPathname());
+        }
 
         return $image;
     }
@@ -375,6 +400,88 @@ class ImageService
                 bucket: $configs->get(MinioOption::Bucket),
             ),
         };
+    }
+
+    protected function makeOptimizedShareImage(UploadedFile $file, string $filename, Collection $configs): ?UploadedFile
+    {
+        try {
+            @ini_set('memory_limit', '512M');
+
+            $format = strtolower($configs->get(GroupConfigKey::OptimizedImageFormat, 'webp') ?: 'webp');
+            if (! in_array($format, ['webp', 'jpg', 'jpeg', 'png'])) {
+                $format = 'webp';
+            }
+
+            $quality = (int) $configs->get(GroupConfigKey::OptimizedImageQuality, 75);
+            $quality = max(1, min(100, $quality));
+            $tmp = tempnam(sys_get_temp_dir(), 'lsky_opt_');
+            if (! $tmp) {
+                return null;
+            }
+
+            if ($format === 'webp' && $this->makeOptimizedWebpByCwebp($file, $tmp, $quality, $configs)) {
+                return new UploadedFile($tmp, basename($filename).'.webp', 'image/webp');
+            }
+
+            $image = InterventionImage::make($file);
+            $maxWidth = $this->getOptimizedImageMaxWidth($configs);
+            if ($maxWidth > 0 && max($image->width(), $image->height()) > $maxWidth) {
+                $image->resize($maxWidth, $maxWidth, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                });
+            }
+            $image->encode($format, $quality);
+            file_put_contents($tmp, $image->getEncoded());
+            $image->destroy();
+
+            $mime = 'image/'.($format === 'jpg' ? 'jpeg' : $format);
+            return new UploadedFile($tmp, basename($filename).".{$format}", $mime);
+        } catch (\Throwable $e) {
+            Utils::e($e, '生成分享优化图时出现异常');
+            return null;
+        }
+    }
+
+    private function makeOptimizedWebpByCwebp(UploadedFile $file, string $output, int $quality, Collection $configs): bool
+    {
+        if (! function_exists('proc_open') || ! trim((string) @shell_exec('command -v cwebp'))) {
+            return false;
+        }
+
+        [$width, $height] = @getimagesize($file->getRealPath()) ?: [0, 0];
+        $maxWidth = $this->getOptimizedImageMaxWidth($configs);
+        $command = ['cwebp', '-quiet', '-q', (string) $quality];
+
+        if ($width > 0 && $height > 0 && $maxWidth > 0 && max($width, $height) > $maxWidth) {
+            $scale = $maxWidth / max($width, $height);
+            $command[] = '-resize';
+            $command[] = (string) max(1, (int) round($width * $scale));
+            $command[] = (string) max(1, (int) round($height * $scale));
+        }
+
+        array_push($command, $file->getRealPath(), '-o', $output);
+
+        try {
+            $process = new Process($command);
+            $process->setTimeout(120);
+            $process->run();
+
+            return $process->isSuccessful() && is_file($output) && filesize($output) > 0;
+        } catch (\Throwable $e) {
+            Utils::e($e, '使用 cwebp 生成分享优化图时出现异常', 'warning');
+            return false;
+        }
+    }
+
+    private function getOptimizedImageMaxWidth(Collection $configs): int
+    {
+        $value = $configs->get(GroupConfigKey::OptimizedImageMaxWidth);
+        if ($value === null || $value === '') {
+            return 2560;
+        }
+
+        return max(0, min(12000, (int) $value));
     }
 
     /**
@@ -646,30 +753,8 @@ class ImageService
         }
     }
 
-    /**
-     * 图片压缩
-     *
-     * @param  UploadedFile  $file
-     * @param  Collection  $configs
-     * @return array
-     */
-    public function compress(UploadedFile $file, Collection $configs): array
-    {
-        return (new ImageCompressionService())->compress($file, $configs);
-    }
-
     protected function replacePathname(string $pathname, UploadedFile $file): string
     {
-        $originalName = $file->getClientOriginalName();
-        $extension = $file->getClientOriginalExtension();
-
-        // Sanitize filename: use basename to prevent path traversal
-        $originalName = basename($originalName);
-        // Remove dangerous characters from filename
-        $originalName = preg_replace('/[^\w\-. ]/u', '_', $originalName);
-
-        $filenameWithoutExt = Str::replaceLast('.' . $extension, '', $originalName);
-
         $array = [
             '{Y}' => date('Y'),
             '{y}' => date('y'),
@@ -681,7 +766,7 @@ class ImageService
             '{md5-16}' => substr(md5(microtime().Str::random()), 0, 16),
             '{str-random-16}' => Str::random(),
             '{str-random-10}' => Str::random(10),
-            '{filename}' => $filenameWithoutExt,
+            '{filename}' => Str::replaceLast('.'.$file->getClientOriginalExtension(), '', $file->getClientOriginalName()),
             '{uid}' => Auth::check() ? Auth::id() : 0,
         ];
         return str_replace(array_keys($array), array_values($array), $pathname);
