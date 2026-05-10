@@ -443,6 +443,48 @@ class ImageService
         }
     }
 
+    protected function convertUploadedImageForStorage(UploadedFile $file, string $filename, string $format, int $quality): UploadedFile
+    {
+        $format = strtolower($format ?: $file->getClientOriginalExtension());
+        if ($format === 'jpg') {
+            $format = 'jpeg';
+        }
+
+        $quality = max(1, min(100, $quality));
+        $tmp = tempnam(sys_get_temp_dir(), 'lsky_img_');
+
+        try {
+            $image = InterventionImage::make($file->getRealPath());
+            $image->encode($format, $quality);
+            file_put_contents($tmp, $image->getEncoded());
+            $image->destroy();
+
+            $extension = $format === 'jpeg' ? 'jpg' : $format;
+            if (! Str::endsWith(strtolower($filename), ".{$extension}")) {
+                $filename = Str::replaceLast('.'.$file->getClientOriginalExtension(), ".{$extension}", $filename);
+            }
+
+            return new UploadedFile($tmp, $filename, $this->mimeTypeFromImageFormat($format), null, true);
+        } catch (\Throwable $e) {
+            if (is_file($tmp)) {
+                @unlink($tmp);
+            }
+
+            throw $e;
+        }
+    }
+
+    private function mimeTypeFromImageFormat(string $format): string
+    {
+        return match (strtolower($format)) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            default => 'image/'.$format,
+        };
+    }
+
     private function makeOptimizedWebpByCwebp(UploadedFile $file, string $output, int $quality, Collection $configs): bool
     {
         if (! function_exists('proc_open') || ! trim((string) @shell_exec('command -v cwebp'))) {

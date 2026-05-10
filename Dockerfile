@@ -61,7 +61,8 @@ CMD ["php-fpm"]
 
 FROM app AS standalone
 
-RUN apk add --no-cache nginx
+RUN apk add --no-cache nginx \
+    && sed -i 's/user nginx;/user www-data;/' /etc/nginx/nginx.conf
 
 COPY docker/nginx/standalone.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisor/standalone.conf /etc/supervisord.conf
