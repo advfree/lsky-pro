@@ -29,7 +29,7 @@
             <a href="javascript:void(0)" data-tab-name="bbcode" class="hover:bg-gray-100 flex justify-center items-center px-8 py-2 border-b-2 border-transparent">BBCode</a>
             <a href="javascript:void(0)" data-tab-name="markdown" class="hover:bg-gray-100 flex justify-center items-center px-8 py-2 border-b-2 border-transparent">Markdown</a>
             <a href="javascript:void(0)" data-tab-name="markdown_with_link" class="hover:bg-gray-100 flex justify-center items-center px-8 py-2 border-b-2 border-transparent whitespace-nowrap">Markdown with link</a>
-            <a href="javascript:void(0)" data-tab-name="thumbnail_url" class="hover:bg-gray-100 flex justify-center items-center px-8 py-2 border-b-2 border-transparent whitespace-nowrap">Thumbnail url</a>
+            <a href="javascript:void(0)" data-tab-name="thumbnail_url" class="hover:bg-gray-100 flex justify-center items-center px-8 py-2 border-b-2 border-transparent whitespace-nowrap">原图链接</a>
         </div>
         <div id="links" class="mt-2">
             <div data-tab="url" class="space-y-2"></div>
@@ -114,6 +114,8 @@
         let $previews = $('#upload-preview');
         let $links = $('#links-container');
         let $picker = $('#picker');
+        const escapeHtml = value => $('<div>').text(value == null ? '' : value).html();
+        const escapeReplace = value => escapeHtml(value).replace(/\$/g, '$$$$');
         let queue = []; // 文件队列
         let excludes = ['psd', 'tif']; // 排除支持预览的格式
         /**
@@ -188,7 +190,7 @@
                         .html()
                         .replace(/__id__/g, guid)
                         .replace(/__src__/g, blob)
-                        .replace(/__name__/g, file.name.replace(/\$/g, '$$$$'))
+                        .replace(/__name__/g, escapeReplace(file.name))
                         .replace(/__info__/g, utils.formatSize(file.size));
                     data.$preview = $previews.append(html).show().find(`[data-id="${guid}"]`);
                     queue[guid] = data;
@@ -245,7 +247,10 @@
                     // 追加链接
                     let links = response.data.links;
                     for (let key in links) {
-                        $('#links [data-tab="' + key + '"]').append('<p class="whitespace-nowrap select-all mt-1 bg-gray-50 hover:bg-gray-200 text-gray-600 rounded px-2 py-1 cursor-pointer overflow-scroll scrollbar-none">' + links[key].toString() + '</p>')
+                        $('<p>')
+                            .addClass('whitespace-nowrap select-all mt-1 bg-gray-50 hover:bg-gray-200 text-gray-600 rounded px-2 py-1 cursor-pointer overflow-scroll scrollbar-none')
+                            .text(links[key].toString())
+                            .appendTo('#links [data-tab="' + key + '"]');
                     }
                     $links.show();
                     utils.setCapacityProgress(response.data.size);

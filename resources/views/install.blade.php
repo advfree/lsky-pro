@@ -164,14 +164,14 @@
             return;
         }
         $(this).attr('disabled', true).removeClass('bg-blue-500').addClass('cursor-not-allowed bg-gray-400').text('执行安装中...')
-        $('#response').html('').addClass('hidden');
+        $('#response').text('').addClass('hidden');
         axios.post('{{ route('install') }}', $('#installing form').serialize()).then(response => {
             $('#response').addClass('hidden')
             if (response.data.status) {
                 $('#installing').hide();
                 $('#success').show();
             } else {
-                $('#response').html(response.data.message + ' ' +(response.data.data.response || '')).removeClass('hidden');
+                $('#response').text(response.data.message + ' ' +(response.data.data.response || '')).removeClass('hidden');
             }
         }).finally(() => {
             $(this).attr('disabled', false).removeClass('cursor-not-allowed bg-gray-400').addClass('bg-blue-500').text('立即安装')

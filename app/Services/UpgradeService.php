@@ -60,7 +60,7 @@ class UpgradeService
             }
             $this->versions = $response->json() ?: [];
             foreach ($this->versions as &$version) {
-                $version['changelog'] = (new \Parsedown())->text($version['changelog']);
+                $version['changelog'] = (string) ($version['changelog'] ?? '');
             }
         }
         return collect($this->versions);
@@ -88,7 +88,7 @@ class UpgradeService
                 throw new \Exception('无法请求升级服务器');
             }
             $result = $response->json();
-            $files = $result['files'];
+            $files = $this->normalizePatchFiles($result['files'] ?? []);
 
             $this->setProgress('下载补丁包...');
             foreach ($files as $file) {
@@ -150,7 +150,28 @@ class UpgradeService
      */
     public function getProgress()
     {
-        Cache::get('upgrade_progress');
+        return Cache::get('upgrade_progress');
+    }
+
+    private function normalizePatchFiles(array $files): array
+    {
+        return array_map(function (array $file) {
+            $pathname = str_replace('\\', '/', (string) ($file['pathname'] ?? ''));
+            $parts = array_filter(explode('/', $pathname), fn ($part) => $part !== '');
+
+            if (
+                $pathname === ''
+                || str_starts_with($pathname, '/')
+                || preg_match('/^[A-Za-z]:\//', $pathname)
+                || in_array('..', $parts, true)
+            ) {
+                throw new \Exception('Upgrade patch contains an unsafe file path.');
+            }
+
+            $file['pathname'] = implode('/', $parts);
+
+            return $file;
+        }, $files);
     }
 
     protected function gc()

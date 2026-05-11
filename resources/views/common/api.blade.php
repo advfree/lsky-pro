@@ -724,7 +724,7 @@
                         <tr>
                             <td class="px-3 py-2 whitespace-nowrap pl-10">thumbnail_url</td>
                             <td class="px-3 py-2 whitespace-nowrap">String</td>
-                            <td class="px-3 py-2 whitespace-nowrap">缩略图 url</td>
+                            <td class="px-3 py-2 whitespace-nowrap">原图链接，兼容旧字段名</td>
                         </tr>
                         </tbody>
                     </table>
@@ -1173,6 +1173,8 @@
                 toggleApiTokenCustomDate();
             });
 
+            let currentUserNote = @json($user->name . ' / ' . $currentUserNote);
+
             $('#create-api-token').click(function () {
                 let $button = $(this);
                 let $result = $('#api-token-result');
@@ -1197,15 +1199,13 @@
                     $('#api-token-value').text(token);
                     $result.show();
                     $('#api-token-table-body').find('td[colspan="5"]').closest('tr').remove();
-                    $('#api-token-table-body').prepend(`
-                        <tr>
-                            <td class="px-3 py-2">${response.data.data.name}</td>
-                            <td class="px-3 py-2 whitespace-nowrap">${expiresAt}</td>
-                            <td class="px-3 py-2 whitespace-nowrap">${new Date().toLocaleString('sv-SE').replace('T', ' ')}</td>
-                            <td class="px-3 py-2 whitespace-nowrap">未使用</td>
-                            <td class="px-3 py-2 whitespace-nowrap">{{ $user->name }} / {{ $currentUserNote }}</td>
-                        </tr>
-                    `);
+                    let $row = $('<tr>');
+                    $('<td>').addClass('px-3 py-2').text(response.data.data.name).appendTo($row);
+                    $('<td>').addClass('px-3 py-2 whitespace-nowrap').text(expiresAt).appendTo($row);
+                    $('<td>').addClass('px-3 py-2 whitespace-nowrap').text(new Date().toLocaleString('sv-SE').replace('T', ' ')).appendTo($row);
+                    $('<td>').addClass('px-3 py-2 whitespace-nowrap').text('未使用').appendTo($row);
+                    $('<td>').addClass('px-3 py-2 whitespace-nowrap').text(currentUserNote).appendTo($row);
+                    $('#api-token-table-body').prepend($row);
                     toastr.success(response.data.message);
                 }).catch(error => {
                     toastr.error(error.message || '生成 Token 失败');

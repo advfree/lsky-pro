@@ -237,7 +237,7 @@ class Image extends Model
             'bbcode' => "[img]{$this->url}[/img]",
             'markdown' => "![{$this->origin_name}]({$this->url})",
             'markdown_with_link' => "[![{$this->origin_name}]({$this->url})]({$this->url})",
-            'thumbnail_url' => $this->thumb_url,
+            'thumbnail_url' => $this->original_url,
         ]));
     }
 

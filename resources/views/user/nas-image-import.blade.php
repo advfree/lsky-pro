@@ -67,6 +67,10 @@
 
     @push('scripts')
         <script>
+            const appendLine = function ($target, label, value) {
+                $('<div>').text(`${label}${value}`).appendTo($target);
+            };
+
             $('#nas-image-import-now').click(function () {
                 let $button = $(this);
                 let $result = $('#nas-image-import-result').hide().html('');
@@ -94,11 +98,15 @@
                         }
 
                         let data = response.data.data.result;
-                        let failed = '';
+                        $result.empty();
+                        appendLine($result, '扫描文件：', data.total);
+                        appendLine($result, '成功：', data.success_count);
+                        appendLine($result, '失败：', data.failed_count);
                         if (data.failed && data.failed.length) {
-                            failed = '<br>失败文件：' + data.failed.map(item => `${item.filename}: ${item.message}`).join('<br>');
+                            $('<div>').text('失败文件：').appendTo($result);
+                            data.failed.forEach(item => appendLine($result, '', `${item.filename}: ${item.message}`));
                         }
-                        $result.html(`扫描文件：${data.total}<br>成功：${data.success_count}<br>失败：${data.failed_count}${failed}`).show();
+                        $result.show();
                         toastr.success(response.data.message);
                         setTimeout(() => window.location.reload(), 1200);
                     }).catch(error => {

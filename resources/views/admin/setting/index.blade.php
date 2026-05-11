@@ -229,13 +229,13 @@
         <div class="flex items-center">
             <img id="icon" src="__icon__" alt="icon" class="rounded-full w-16" style="animation-duration: 5s">
             <div class="flex flex-col text-gray-700 ml-4">
-                <p class="font-semibold">Lsky Pro __name__</p>
-                <p class="text-sm">__size__</p>
-                <p class="text-sm">发布于 __pushed_at__</p>
+                <p class="font-semibold" data-version-name>Lsky Pro __name__</p>
+                <p class="text-sm" data-version-size>__size__</p>
+                <p class="text-sm" data-version-pushed-at>发布于 __pushed_at__</p>
             </div>
         </div>
         <p id="upgrade-message" class="mt-4 text-sm text-gray-500"></p>
-        <div class="mt-4 text-sm markdown-body">
+        <div class="mt-4 text-sm markdown-body whitespace-pre-wrap" data-version-changelog>
             __changelog__
         </div>
         <div class="mt-6 text-right">
@@ -245,6 +245,11 @@
 
     @push('scripts')
         <script>
+            const appendLine = function ($target, label, value) {
+                $('<div>').text(`${label}${value}`).appendTo($target);
+            };
+            const safeImageUrl = value => /^(https?:)?\/\//i.test(value || '') || String(value || '').startsWith('/') ? value : '';
+
             // 设置选中驱动
             let setSelected = function () {
                 $('[data-select]').each(function () {
@@ -349,7 +354,16 @@
                 }).then(response => {
                     if (response.data.status) {
                         let backup = response.data.data.backup;
-                        $result.html(`备份文件：${backup.filename}<br>保存路径：${backup.path}<br>文件大小：${backup.human_size}<br><a class="text-blue-600 underline" href="${backup.download_url}">下载备份文件</a>`).show();
+                        $result.empty();
+                        appendLine($result, '备份文件：', backup.filename);
+                        appendLine($result, '保存路径：', backup.path);
+                        appendLine($result, '文件大小：', backup.human_size);
+                        $('<a>')
+                            .addClass('text-blue-600 underline')
+                            .attr('href', backup.download_url)
+                            .text('下载备份文件')
+                            .appendTo($result);
+                        $result.show();
                         toastr.success(response.data.message);
                     } else {
                         toastr.error(response.data.message);
@@ -416,13 +430,13 @@
                     if (response.data.status && response.data.data.is_update) {
                         $('#check-update').hide();
                         let version = response.data.data.version;
-                        let html = $('#update-tpl').html()
-                            .replace(/__icon__/g, version.icon)
-                            .replace(/__name__/g, version.name)
-                            .replace(/__size__/g, version.size)
-                            .replace(/__pushed_at__/g, version.pushed_at)
-                            .replace(/__changelog__/g, version.changelog);
-                        $('#have-update').html(html).show();
+                        let $update = $($('#update-tpl').html());
+                        $update.find('#icon').attr('src', safeImageUrl(version.icon));
+                        $update.find('[data-version-name]').text(`Lsky Pro ${version.name || ''}`);
+                        $update.find('[data-version-size]').text(version.size || '');
+                        $update.find('[data-version-pushed-at]').text(`发布于 ${version.pushed_at || ''}`);
+                        $update.find('[data-version-changelog]').text(version.changelog || '');
+                        $('#have-update').empty().append($update).show();
                         $('.markdown-body a').attr('target', '_blank');
                         callback && callback(version);
                     } else {

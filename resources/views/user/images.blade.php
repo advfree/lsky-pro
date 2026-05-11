@@ -277,15 +277,26 @@
                 }
             }
 
+            const escapeHtml = value => $('<div>').text(value == null ? '' : value).html();
+            const escapeAttr = value => escapeHtml(value).replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            const replaceText = value => escapeHtml(value).replace(/\$/g, '$$$$');
+            const replaceAttr = value => escapeAttr(value).replace(/\$/g, '$$$$');
+            const showInlineError = function ($target, message) {
+                $target.empty()
+                    .append($('<i>').addClass('fas fa-exclamation-circle'))
+                    .append(document.createTextNode(' ' + (message || '')))
+                    .show();
+            };
+
             $photos.justifiedGallery(gridConfigs);
 
             let albumsInfinite = null;
             const buildAlbumOverviewItem = (album) => {
                 return $('#album-overview-item-tpl').html()
-                    .replace(/__json__/g, JSON.stringify(album).replace(/\$/g, '$$$$'))
-                    .replace(/__intro__/g, album.intro || album.name)
+                    .replace(/__json__/g, replaceAttr(JSON.stringify(album)))
+                    .replace(/__intro__/g, replaceAttr(album.intro || album.name))
                     .replace(/__icon__/g, album.icon)
-                    .replace(/__name__/g, album.name)
+                    .replace(/__name__/g, replaceText(album.name))
                     .replace(/__image_num__/g, album.image_num || 0)
             };
 
@@ -370,14 +381,14 @@
                     for (const i in images) {
                         html += $('#images-item-tpl').html()
                             .replace(/__id__/g, images[i].id)
-                            .replace(/__name__/g, images[i].filename.replace(/\$/g, '$$$$'))
+                            .replace(/__name__/g, replaceAttr(images[i].filename))
                             .replace(/__human_date__/g, images[i].human_date)
                             .replace(/__date__/g, images[i].date)
-                            .replace(/__url__/g, images[i].url)
-                            .replace(/__thumb_url__/g, images[i].thumb_url)
+                            .replace(/__url__/g, replaceAttr(images[i].url))
+                            .replace(/__thumb_url__/g, replaceAttr(images[i].thumb_url))
                             .replace(/__width__/g, images[i].width)
                             .replace(/__height__/g, images[i].height)
-                            .replace(/__json__/g, JSON.stringify(images[i]).replace(/\$/g, '$$$$'))
+                            .replace(/__json__/g, replaceAttr(JSON.stringify(images[i])))
                     }
 
                     $photos.append(html);
@@ -431,10 +442,10 @@
                             for (const i in albums) {
                                 let item = $('#albums-item-tpl').html()
                                     .replace(/__id__/g, albums[i].id)
-                                    .replace(/__name__/g, albums[i].name)
-                                    .replace(/__intro__/g, albums[i].intro)
+                                    .replace(/__name__/g, replaceText(albums[i].name))
+                                    .replace(/__intro__/g, replaceAttr(albums[i].intro))
                                     .replace(/__image_num__/g, albums[i].image_num)
-                                    .replace(/__json__/g, JSON.stringify(albums[i]))
+                                    .replace(/__json__/g, replaceAttr(JSON.stringify(albums[i])))
                                 if (albums[i].id === selectedAlbum.id) {
                                     // 选中的相册高亮
                                     item = item
@@ -477,8 +488,8 @@
                         if (selectedId !== $item.data('id')) {
                             $item.after($('#album-update-tpl').html()
                                 .replace(/__id__/g, $item.data('id'))
-                                .replace(/__name__/g, $item.find('>span').html())
-                                .replace(/__intro__/g, $item.attr('title'))
+                                .replace(/__name__/g, replaceAttr($item.find('>span.name').text()))
+                                .replace(/__intro__/g, replaceText($item.attr('title')))
                             );
                         }
                     });
@@ -522,7 +533,7 @@
                                 resetAlbums()
                                 refreshAlbumOverview();
                             } else {
-                                $errorMessage.html('<i class="fas fa-exclamation-circle"></i> ' + response.data.message).show();
+                                showInlineError($errorMessage, response.data.message);
                             }
                         });
                     });
@@ -541,7 +552,7 @@
                                 $editContainer.remove();
                                 refreshAlbumOverview();
                             } else {
-                                $errorMessage.html('<i class="fas fa-exclamation-circle"></i> ' + response.data.message).show();
+                                showInlineError($errorMessage, response.data.message);
                             }
                         });
                     });
@@ -829,20 +840,20 @@
                         if (response.data.status) {
                             let image = response.data.data.image;
                             let content = $('#image-detail-tpl').html()
-                                .replace(/__album_name__/g, image.album ? image.album.name : '-')
-                                .replace(/__strategy_name__/g, image.strategy ? image.strategy.name : '-')
-                                .replace(/__filename__/g, image.filename.replace(/\$/g, '$$$$'))
-                                .replace(/__origin_name__/g, image.origin_name.replace(/\$/g, '$$$$'))
+                                .replace(/__album_name__/g, replaceText(image.album ? image.album.name : '-'))
+                                .replace(/__strategy_name__/g, replaceText(image.strategy ? image.strategy.name : '-'))
+                                .replace(/__filename__/g, replaceText(image.filename))
+                                .replace(/__origin_name__/g, replaceText(image.origin_name))
                                 .replace(/__size__/g, utils.formatSize(image.size * 1024))
-                                .replace(/__mimetype__/g, image.mimetype)
+                                .replace(/__mimetype__/g, replaceText(image.mimetype))
                                 .replace(/__width__/g, image.width)
                                 .replace(/__height__/g, image.height)
-                                .replace(/__md5__/g, image.md5)
-                                .replace(/__sha1__/g, image.sha1)
+                                .replace(/__md5__/g, replaceText(image.md5))
+                                .replace(/__sha1__/g, replaceText(image.sha1))
                                 .replace(/__permission__/g, image.permission === 1 ? '公开' : '私有')
-                                .replace(/__uploaded_ip__/g, image.uploaded_ip)
-                                .replace(/__created_at__/g, image.created_at)
-                            drawer.open(item.filename, content);
+                                .replace(/__uploaded_ip__/g, replaceText(image.uploaded_ip))
+                                .replace(/__created_at__/g, replaceText(image.created_at))
+                            drawer.open(escapeHtml(item.filename), content);
                         } else {
                             toastr.error(response.data.message);
                         }
@@ -903,7 +914,7 @@
                             attributes: {"data-link-type": "markdown_with_link"},
                         },
                         {
-                            text: 'Thumbnail url',
+                            text: '原图链接',
                             classes: ['copy'],
                             attributes: {"data-link-type": "thumbnail_url"},
                         },

@@ -25,6 +25,50 @@ if [ ! -e public/thumbnails ]; then
     ln -sfn /var/www/html/storage/app/thumbnails public/thumbnails
 fi
 touch .env
+
+set_env_default() {
+    key="$1"
+    value="$2"
+    escaped_value="$(printf '%s' "$value" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+    line="${key}=\"${escaped_value}\""
+
+    if grep -q "^${key}=" .env; then
+        current="$(grep "^${key}=" .env | tail -n 1 | cut -d= -f2-)"
+        if [ -n "$current" ]; then
+            return
+        fi
+    fi
+
+    tmp="$(mktemp)"
+    if grep -q "^${key}=" .env; then
+        awk -v key="$key" -v line="$line" '
+            BEGIN { replaced = 0 }
+            $0 ~ "^" key "=" && !replaced {
+                print line
+                replaced = 1
+                next
+            }
+            { print }
+        ' .env > "$tmp"
+    else
+        cat .env > "$tmp"
+        printf '%s\n' "$line" >> "$tmp"
+    fi
+    cat "$tmp" > .env
+    rm -f "$tmp"
+}
+
+set_env_default DB_CONNECTION "$DB_CONNECTION"
+set_env_default DB_HOST "$DB_HOST"
+set_env_default DB_PORT "$DB_PORT"
+set_env_default DB_DATABASE "$DB_DATABASE"
+set_env_default DB_USERNAME "$DB_USERNAME"
+set_env_default DB_PASSWORD "$DB_PASSWORD"
+set_env_default CACHE_DRIVER "$CACHE_DRIVER"
+set_env_default SESSION_DRIVER "$SESSION_DRIVER"
+set_env_default QUEUE_CONNECTION "$QUEUE_CONNECTION"
+set_env_default IMAGE_DRIVER "$IMAGE_DRIVER"
+
 chown -h www-data:www-data .env installed.lock public/i public/thumbnails
 chown -R www-data:www-data storage bootstrap/cache public/uploads
 
